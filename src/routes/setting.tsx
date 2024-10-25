@@ -63,7 +63,11 @@ import {
 } from "@/options";
 import createAboutDialog from "@/components/about-dialog";
 import { Button } from "@/components/ui/button";
-import { IconDelete, IconInfo } from "@/components/icons";
+import {
+  IconDelete,
+  IconExpandAll,
+  IconInfo,
+} from "@/components/icons";
 import { Separator } from "@/components/ui/seprartor";
 import { createDialog } from "@/components/dialogs/dialog";
 import { toast } from "solid-sonner";
@@ -72,6 +76,12 @@ import { cacheManager } from "@/libs/services/cache-serivce";
 import { v4 } from "uuid";
 import { makePersisted } from "@solid-primitives/storage";
 import { createPermission } from "@solid-primitives/permission";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ComponentProps } from "solid-js";
 type MediaDeviceInfoType = Omit<MediaDeviceInfo, "toJSON">;
 
 export const [devices, setDevices] = makePersisted(
@@ -177,13 +187,13 @@ export default function Settings() {
                   type="file"
                   accept="image/*"
                   class="hidden"
-                  onChange={(ev) => {
+                  onChange={async (ev) => {
                     const file =
                       ev.currentTarget.files?.[0];
                     if (file) {
                       const id = v4();
                       const cache =
-                        cacheManager.createCache(id);
+                        await cacheManager.createCache(id);
                       cache.setInfo({
                         id,
                         fileName: file.name,
@@ -469,133 +479,30 @@ export default function Settings() {
           <h3 id="sender" class="h3">
             {t("setting.sender.title")}
           </h3>
-          <label class="flex flex-col gap-2">
-            <Slider
-              minValue={1}
-              maxValue={8}
-              defaultValue={[appOptions.channelsNumber]}
-              class="gap-2"
-              onChange={(value) => {
-                setAppOptions("channelsNumber", value[0]);
-              }}
-            >
-              <div class="flex w-full justify-between">
-                <SliderLabel>
-                  {t("setting.sender.num_channels.title")}
-                </SliderLabel>
-                <SliderValueLabel />
-              </div>
-              <SliderTrack>
-                <SliderFill />
-                <SliderThumb />
-                <SliderThumb />
-              </SliderTrack>
-            </Slider>
-            <p class="muted">
-              {t("setting.sender.num_channels.description")}
-            </p>
-          </label>
-
-          <Slider
-            minValue={appOptions.blockSize}
-            maxValue={1024 * 1024 * 10}
-            step={appOptions.blockSize}
-            defaultValue={[appOptions.chunkSize]}
-            class="gap-2"
-            getValueLabel={({ values }) =>
-              formatBtyeSize(values[0], 2)
-            }
-            onChange={(value) => {
-              setAppOptions("chunkSize", value[0]);
-            }}
-          >
-            <div class="flex w-full justify-between">
-              <SliderLabel>
-                {t("setting.sender.chunk_size.title")}
-              </SliderLabel>
-              <SliderValueLabel />
-            </div>
-            <SliderTrack>
-              <SliderFill />
-              <SliderThumb />
-              <SliderThumb />
-            </SliderTrack>
-          </Slider>
-          <Slider
-            minValue={16 * 1024}
-            maxValue={200 * 1024}
-            step={1024}
-            defaultValue={[appOptions.blockSize]}
-            class="gap-2"
-            getValueLabel={({ values }) =>
-              formatBtyeSize(values[0], 0)
-            }
-            onChange={(value) => {
-              setAppOptions("blockSize", value[0]);
-            }}
-          >
-            <div class="flex w-full justify-between">
-              <SliderLabel>
-                {t("setting.sender.block_size.title")}
-              </SliderLabel>
-              <SliderValueLabel />
-            </div>
-            <SliderTrack>
-              <SliderFill />
-              <SliderThumb />
-              <SliderThumb />
-            </SliderTrack>
-          </Slider>
-          <Slider
-            minValue={1024}
-            maxValue={1024 * 1024}
-            step={1024}
-            defaultValue={[
-              appOptions.bufferedAmountLowThreshold,
-            ]}
-            getValueLabel={({ values }) =>
-              formatBtyeSize(values[0], 2)
-            }
-            class="gap-2"
-            onChange={(value) => {
-              setAppOptions(
-                "bufferedAmountLowThreshold",
-                value[0],
-              );
-            }}
-          >
-            <div class="flex w-full justify-between">
-              <SliderLabel>
-                {t(
-                  "setting.sender.max_buffer_amount.title",
-                )}
-              </SliderLabel>
-              <SliderValueLabel />
-            </div>
-            <SliderTrack>
-              <SliderFill />
-              <SliderThumb />
-              <SliderThumb />
-            </SliderTrack>
-          </Slider>
-
           <div class="flex flex-col gap-2">
             <Switch
               class="flex items-center justify-between"
-              checked={appOptions.ordered}
+              checked={appOptions.automaticCacheDeletion}
               onChange={(isChecked) =>
-                setAppOptions("ordered", isChecked)
+                setAppOptions(
+                  "automaticCacheDeletion",
+                  isChecked,
+                )
               }
             >
               <SwitchLabel>
-                {t("setting.sender.ordered.title")}
+                {t(
+                  "setting.sender.automatic_cache_deletion.title",
+                )}
               </SwitchLabel>
               <SwitchControl>
                 <SwitchThumb />
               </SwitchControl>
             </Switch>
             <p class="muted">
-              {t("setting.sender.ordered.description")}
+              {t(
+                "setting.sender.automatic_cache_deletion.description",
+              )}
             </p>
           </div>
           <label class="flex flex-col gap-2">
@@ -639,51 +546,243 @@ export default function Settings() {
               )}
             </p>
           </label>
+
           <h3 id="receiver" class="h3">
             {t("setting.receiver.title")}
           </h3>
-          <label class="flex flex-col gap-2">
-            <Slider
-              minValue={1}
-              maxValue={128}
-              step={1}
-              defaultValue={[
-                appOptions.maxMomeryCacheSlices,
-              ]}
-              getValueLabel={({ values }) =>
-                `${values[0]} (${formatBtyeSize(values[0] * appOptions.chunkSize, 0)})`
-              }
-              class="gap-2"
-              onChange={(value) => {
+          <div class="flex flex-col gap-2">
+            <Switch
+              class="flex items-center justify-between"
+              checked={appOptions.automaticDownload}
+              onChange={(isChecked) =>
                 setAppOptions(
-                  "maxMomeryCacheSlices",
-                  value[0],
-                );
-              }}
+                  "automaticDownload",
+                  isChecked,
+                )
+              }
             >
-              <div class="flex w-full justify-between">
-                <SliderLabel>
-                  {t(
-                    "setting.receiver.max_cached_chunks.title",
-                  )}
-                </SliderLabel>
-                <SliderValueLabel />
-              </div>
-              <SliderTrack>
-                <SliderFill />
-                <SliderThumb />
-                <SliderThumb />
-              </SliderTrack>
-            </Slider>
+              <SwitchLabel>
+                {t(
+                  "setting.receiver.automatic_download.title",
+                )}
+              </SwitchLabel>
+              <SwitchControl>
+                <SwitchThumb />
+              </SwitchControl>
+            </Switch>
             <p class="muted">
               {t(
-                "setting.receiver.max_cached_chunks.description",
+                "setting.receiver.automatic_download.description",
               )}
             </p>
-          </label>
+          </div>
 
           <MediaSetting />
+          <Collapsible>
+            <CollapsibleTrigger
+              as={(props: ComponentProps<"div">) => (
+                <div
+                  class="flex items-center gap-4 p-2"
+                  {...props}
+                >
+                  <h3 class="h3" id="advanced">
+                    {t("setting.advanced_settings.title")}
+                  </h3>
+                  <Button variant="outline">
+                    <IconExpandAll class="size-4" />
+                    <span></span>
+                  </Button>
+                </div>
+              )}
+            ></CollapsibleTrigger>
+            <CollapsibleContent class="flex flex-col gap-2 rounded-md border p-4">
+              <h4 id="advanced-sender" class="h4">
+                {t(
+                  "setting.advanced_settings.advanced_sender.title",
+                )}
+              </h4>
+              <label class="flex flex-col gap-2">
+                <Slider
+                  minValue={1}
+                  maxValue={8}
+                  defaultValue={[appOptions.channelsNumber]}
+                  class="gap-2"
+                  onChange={(value) => {
+                    setAppOptions(
+                      "channelsNumber",
+                      value[0],
+                    );
+                  }}
+                >
+                  <div class="flex w-full justify-between">
+                    <SliderLabel>
+                      {t(
+                        "setting.sender.num_channels.title",
+                      )}
+                    </SliderLabel>
+                    <SliderValueLabel />
+                  </div>
+                  <SliderTrack>
+                    <SliderFill />
+                    <SliderThumb />
+                    <SliderThumb />
+                  </SliderTrack>
+                </Slider>
+                <p class="muted">
+                  {t(
+                    "setting.sender.num_channels.description",
+                  )}
+                </p>
+              </label>
 
+              <Slider
+                minValue={appOptions.blockSize}
+                maxValue={1024 * 1024 * 10}
+                step={appOptions.blockSize}
+                defaultValue={[appOptions.chunkSize]}
+                class="gap-2"
+                getValueLabel={({ values }) =>
+                  formatBtyeSize(values[0], 2)
+                }
+                onChange={(value) => {
+                  setAppOptions("chunkSize", value[0]);
+                }}
+              >
+                <div class="flex w-full justify-between">
+                  <SliderLabel>
+                    {t("setting.sender.chunk_size.title")}
+                  </SliderLabel>
+                  <SliderValueLabel />
+                </div>
+                <SliderTrack>
+                  <SliderFill />
+                  <SliderThumb />
+                  <SliderThumb />
+                </SliderTrack>
+              </Slider>
+              <Slider
+                minValue={16 * 1024}
+                maxValue={200 * 1024}
+                step={1024}
+                defaultValue={[appOptions.blockSize]}
+                class="gap-2"
+                getValueLabel={({ values }) =>
+                  formatBtyeSize(values[0], 0)
+                }
+                onChange={(value) => {
+                  setAppOptions("blockSize", value[0]);
+                }}
+              >
+                <div class="flex w-full justify-between">
+                  <SliderLabel>
+                    {t("setting.sender.block_size.title")}
+                  </SliderLabel>
+                  <SliderValueLabel />
+                </div>
+                <SliderTrack>
+                  <SliderFill />
+                  <SliderThumb />
+                  <SliderThumb />
+                </SliderTrack>
+              </Slider>
+              <Slider
+                minValue={1024}
+                maxValue={1024 * 1024}
+                step={1024}
+                defaultValue={[
+                  appOptions.bufferedAmountLowThreshold,
+                ]}
+                getValueLabel={({ values }) =>
+                  formatBtyeSize(values[0], 2)
+                }
+                class="gap-2"
+                onChange={(value) => {
+                  setAppOptions(
+                    "bufferedAmountLowThreshold",
+                    value[0],
+                  );
+                }}
+              >
+                <div class="flex w-full justify-between">
+                  <SliderLabel>
+                    {t(
+                      "setting.sender.max_buffer_amount.title",
+                    )}
+                  </SliderLabel>
+                  <SliderValueLabel />
+                </div>
+                <SliderTrack>
+                  <SliderFill />
+                  <SliderThumb />
+                  <SliderThumb />
+                </SliderTrack>
+              </Slider>
+
+              <div class="flex flex-col gap-2">
+                <Switch
+                  class="flex items-center justify-between"
+                  checked={appOptions.ordered}
+                  onChange={(isChecked) =>
+                    setAppOptions("ordered", isChecked)
+                  }
+                >
+                  <SwitchLabel>
+                    {t("setting.sender.ordered.title")}
+                  </SwitchLabel>
+                  <SwitchControl>
+                    <SwitchThumb />
+                  </SwitchControl>
+                </Switch>
+                <p class="muted">
+                  {t("setting.sender.ordered.description")}
+                </p>
+              </div>
+              <h4 id="advanced-receiver" class="h4">
+                {t(
+                  "setting.advanced_settings.advanced_receiver.title",
+                )}
+              </h4>
+              <label class="flex flex-col gap-2">
+                <Slider
+                  minValue={1}
+                  maxValue={128}
+                  step={1}
+                  defaultValue={[
+                    appOptions.maxMomeryCacheSlices,
+                  ]}
+                  getValueLabel={({ values }) =>
+                    `${values[0]} (${formatBtyeSize(values[0] * appOptions.chunkSize, 0)})`
+                  }
+                  class="gap-2"
+                  onChange={(value) => {
+                    setAppOptions(
+                      "maxMomeryCacheSlices",
+                      value[0],
+                    );
+                  }}
+                >
+                  <div class="flex w-full justify-between">
+                    <SliderLabel>
+                      {t(
+                        "setting.receiver.max_cached_chunks.title",
+                      )}
+                    </SliderLabel>
+                    <SliderValueLabel />
+                  </div>
+                  <SliderTrack>
+                    <SliderFill />
+                    <SliderThumb />
+                    <SliderThumb />
+                  </SliderTrack>
+                </Slider>
+                <p class="muted">
+                  {t(
+                    "setting.receiver.max_cached_chunks.description",
+                  )}
+                </p>
+              </label>
+            </CollapsibleContent>
+          </Collapsible>
           <Separator />
           <label class="flex flex-col gap-2">
             <Button

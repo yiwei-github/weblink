@@ -3,23 +3,26 @@ import {
   SetStoreFunction,
 } from "solid-js/store";
 import {
-  FileTransmitter,
+  FileTransferer,
   TransferMode,
-} from "../core/file-transmitter";
+} from "../core/file-transferer";
 import { FileID } from "../core/type";
-import { ChunkCache } from "../cache/chunk-cache";
+import {
+  ChunkCache,
+  FileMetaData,
+} from "../cache/chunk-cache";
 import { waitBufferedAmountLowThreshold } from "../core/utils/channel";
 import { appOptions } from "@/options";
 
 class TransfererFactory {
-  readonly transferers: Record<FileID, FileTransmitter>;
+  readonly transferers: Record<FileID, FileTransferer>;
   private setTransferers: SetStoreFunction<
-    Record<FileID, FileTransmitter>
+    Record<FileID, FileTransferer>
   >;
   private channels: Record<FileID, RTCDataChannel[]> = {};
   constructor() {
     const [transferers, setTransferers] =
-      createStore<Record<FileID, FileTransmitter>>();
+      createStore<Record<FileID, FileTransferer>>();
     this.transferers = transferers;
     this.setTransferers = setTransferers;
   }
@@ -59,14 +62,16 @@ class TransfererFactory {
   createTransfer(
     cache: ChunkCache,
     mode: TransferMode = TransferMode.Receive,
+    info?: FileMetaData,
   ) {
     const fileId = cache.id;
     const tf = this.getTransferer(fileId);
     if (tf) {
       this.destroyTransfer(tf.id);
     }
-    const transferer = new FileTransmitter({
+    const transferer = new FileTransferer({
       cache,
+      info,
       bufferedAmountLowThreshold:
         appOptions.bufferedAmountLowThreshold,
       blockSize: appOptions.blockSize,
@@ -93,8 +98,12 @@ class TransfererFactory {
         if (transferer.mode === TransferMode.Receive) {
           await cache.flush();
           cache.getFile();
+        } else {
+          if (appOptions.automaticCacheDeletion)
+            cache.cleanup();
         }
         this.destroyTransfer(transferer.id);
+
         controller.abort();
       },
       { once: true, signal: controller.signal },

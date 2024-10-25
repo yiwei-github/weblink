@@ -23,11 +23,14 @@ import {
   ProgressValueLabel,
 } from "../ui/progress";
 import { clientProfile } from "@/libs/core/store";
-import { ChunkCache } from "@/libs/cache/chunk-cache";
 import {
-  FileTransmitter,
+  ChunkCache,
+  FileMetaData,
+} from "@/libs/cache/chunk-cache";
+import {
+  FileTransferer,
   TransferMode,
-} from "@/libs/core/file-transmitter";
+} from "@/libs/core/file-transferer";
 import createTransferSpeed from "@/libs/hooks/transfer-speed";
 import { formatBtyeSize } from "@/libs/utils/format-filesize";
 import { ContextMenuItem } from "../ui/context-menu";
@@ -77,15 +80,64 @@ export interface MessageCardProps
 export interface FileMessageCardProps {
   message: FileTransferMessage;
 }
+
+const FileTitle = {
+  image: (props: { name: string }) => (
+    <p class="relative">
+      {" "}
+      <span
+        class="absolute left-0 right-0 overflow-hidden text-ellipsis
+          whitespace-nowrap"
+      >
+        <IconPhotoFilled class="inline size-4 align-middle" />{" "}
+        {props.name}
+      </span>
+    </p>
+  ),
+  video: (props: { name: string }) => (
+    <p class="relative">
+      {" "}
+      <span
+        class="absolute left-0 right-0 overflow-hidden text-ellipsis
+          whitespace-nowrap"
+      >
+        <IconVideoFileFilled class="inline size-4 align-middle" />{" "}
+        {props.name}
+      </span>
+    </p>
+  ),
+  audio: (props: { name: string }) => (
+    <p class="relative">
+      {" "}
+      <span
+        class="absolute left-0 right-0 overflow-hidden text-ellipsis
+          whitespace-nowrap"
+      >
+        <IconAudioFileFilled class="inline size-4 align-middle" />{" "}
+        {props.name}
+      </span>
+    </p>
+  ),
+  default: (props: { name: string }) => (
+    <div class="flex items-center gap-1">
+      <div>
+        <IconInsertDriveFile class="size-8" />
+      </div>
+
+      <p> {props.name}</p>
+    </div>
+  ),
+};
+
 const FileMessageCard: Component<FileMessageCardProps> = (
   props,
 ) => {
   const { requestFile } = useWebRTC();
-  const cache = createMemo<ChunkCache | null>(
+  const fileCache = createMemo<ChunkCache | null>(
     () => cacheManager.caches[props.message.fid] ?? null,
   );
 
-  const transferer = createMemo<FileTransmitter | null>(
+  const transferer = createMemo<FileTransferer | null>(
     () =>
       transferManager.transferers[props.message.fid] ??
       null,
@@ -93,6 +145,10 @@ const FileMessageCard: Component<FileMessageCardProps> = (
 
   const clientInfo = createMemo(
     () => sessionService.clientInfo[props.message.client],
+  );
+
+  const cacheData = createMemo<FileMetaData | undefined>(
+    () => cacheManager.cacheInfo[props.message.fid],
   );
 
   // createEffect(async () => {
@@ -110,11 +166,12 @@ const FileMessageCard: Component<FileMessageCardProps> = (
   return (
     <div class="flex flex-col gap-2">
       <Show
-        when={cache()?.info()}
+        when={cacheData()}
         fallback={
-          <p class="italic text-muted-foreground">
-            Deleted
-          </p>
+          <Dynamic
+            component={FileTitle["default"]}
+            name={props.message.fileName}
+          />
         }
       >
         {(info) => (
@@ -171,16 +228,10 @@ const FileMessageCard: Component<FileMessageCardProps> = (
                         "image/",
                       )}
                     >
-                      <p class="relative">
-                        {" "}
-                        <span
-                          class="absolute left-0 right-0 overflow-hidden text-ellipsis
-                            whitespace-nowrap"
-                        >
-                          <IconPhotoFilled class="inline size-4 align-middle" />{" "}
-                          {info().fileName}
-                        </span>
-                      </p>
+                      <Dynamic
+                        component={FileTitle["image"]}
+                        name={props.message.fileName}
+                      />
 
                       <a
                         id="image"
@@ -210,16 +261,10 @@ const FileMessageCard: Component<FileMessageCardProps> = (
                         "video/",
                       )}
                     >
-                      <p class="relative">
-                        {" "}
-                        <span
-                          class="absolute left-0 right-0 overflow-hidden text-ellipsis
-                            whitespace-nowrap"
-                        >
-                          <IconVideoFileFilled class="inline size-4 align-middle" />{" "}
-                          {info().fileName}
-                        </span>
-                      </p>
+                      <Dynamic
+                        component={FileTitle["video"]}
+                        name={props.message.fileName}
+                      />
                       <video
                         class="max-h-60 lg:max-h-72 xl:max-h-96"
                         controls
@@ -231,16 +276,10 @@ const FileMessageCard: Component<FileMessageCardProps> = (
                         "audio/",
                       )}
                     >
-                      <p class="relative">
-                        {" "}
-                        <span
-                          class="absolute left-0 right-0 overflow-hidden text-ellipsis
-                            whitespace-nowrap"
-                        >
-                          <IconAudioFileFilled class="inline size-4 align-middle" />{" "}
-                          {info().fileName}
-                        </span>
-                      </p>
+                      <Dynamic
+                        component={FileTitle["audio"]}
+                        name={props.message.fileName}
+                      />
                       <audio
                         class="max-h-60 lg:max-h-72 xl:max-h-96"
                         controls
@@ -555,7 +594,6 @@ export const MessageContent: Component<MessageCardProps> = (
 
                     messageStores.setMessage(
                       sessionMessage,
-                      session(),
                     );
                     session().sendMessage(sessionMessage);
                   }}

@@ -7,14 +7,15 @@ import {
 import { ChunkRange } from "../utils/range";
 import { ClientID, FileID, Client } from "./type";
 import {
-  FileTransmitter,
+  FileTransferer,
   ProgressValue,
   TransferMode,
-} from "./file-transmitter";
+} from "./file-transferer";
 import { ChunkCache } from "../cache/chunk-cache";
 import { v4 } from "uuid";
 import { PeerSession } from "./session";
 import { Accessor, createSignal, Setter } from "solid-js";
+import { clientProfile } from "./store";
 
 export type MessageID = string;
 
@@ -71,6 +72,7 @@ export type SendTextMessage = BaseExchangeMessage & {
 
 export type CheckMessage = BaseExchangeMessage & {
   type: "check-message";
+
   id: MessageID;
 };
 
@@ -106,6 +108,7 @@ class MessageStores {
   readonly messages: StoreMessage[];
   readonly clients: Client[];
   readonly db: Promise<IDBDatabase> | IDBDatabase;
+  private localClientId: ClientID = clientProfile.clientId;
   private setMessages: SetStoreFunction<StoreMessage[]>;
   private setClients: SetStoreFunction<Client[]>;
   status: Accessor<"initializing" | "ready">;
@@ -347,24 +350,17 @@ class MessageStores {
     return controller;
   }
 
-  async setMessage(
+  setMessage(
     sessionMsg: SessionMessage,
-    session: PeerSession,
-  ) {
+  ): SessionMessage | null {
     let index: number = -1;
     const isSending =
-      session.clientId === sessionMsg.client;
+      this.localClientId === sessionMsg.client;
     const setStatus = (message: StoreMessage) => {
       this.setMessages(index, "error", undefined);
       this.setMessageDB(this.messages[index]);
       if (!isSending) {
-        session.sendMessage({
-          type: "check-message",
-          id: message.id,
-          createdAt: Date.now(),
-          client: sessionMsg.target,
-          target: sessionMsg.client,
-        } satisfies CheckMessage);
+        return;
       } else {
         if (message.status === "received") return;
 
@@ -429,6 +425,7 @@ class MessageStores {
         );
       }
     }
+    return null;
   }
 
   setClient(client: Client) {
@@ -524,7 +521,7 @@ class MessageStores {
     }
   }
 
-  addTransfer(transferer: FileTransmitter): boolean {
+  addTransfer(transferer: FileTransferer) {
     if (this.controllers[transferer.id] !== undefined) {
       console.warn(
         `transferer ${transferer.id} has been added`,
@@ -535,8 +532,11 @@ class MessageStores {
         msg.type === "file" && msg.fid === transferer.id,
     );
     if (index === -1) {
-      return false;
+      console.warn(`transferer for message not existed`);
+
+      return;
     }
+    console.log(`add transfer`, transferer);
 
     const controller = this.getController(transferer.id);
 
@@ -607,8 +607,6 @@ class MessageStores {
         signal: controller.signal,
       },
     );
-
-    return true;
   }
 }
 

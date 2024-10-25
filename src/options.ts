@@ -34,8 +34,10 @@ export type CompressionLevel =
 export type AppOption = {
   // Receiver
   maxMomeryCacheSlices: number;
+  automaticDownload: boolean;
 
   // Sender
+  automaticCacheDeletion: boolean;
   channelsNumber: number;
   chunkSize: number;
   ordered: boolean;
@@ -60,10 +62,11 @@ export type AppOption = {
 
 export const getDefaultAppOptions = () => {
   return {
-    channelsNumber: 2,
+    channelsNumber: 1,
     chunkSize: 1024 * 1024,
     blockSize: 64 * 1024,
     ordered: false,
+    automaticCacheDeletion: false,
     bufferedAmountLowThreshold: 512 * 1024,
     maxMomeryCacheSlices: 12,
     videoMaxBitrate: 128 * 1024 * 1024,
@@ -78,6 +81,7 @@ export const getDefaultAppOptions = () => {
     showAboutDialog: true,
     shareServersWithOthers: false,
     backgroundImageOpacity: 0.5,
+    automaticDownload: true,
   } satisfies AppOption;
 };
 

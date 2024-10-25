@@ -93,8 +93,9 @@ interface SendData {
 
 export const TRANSFER_CHANNEL_PREFIX = "file-";
 
-interface FileTransmitOptions {
+interface FileTransfererOptions {
   cache: ChunkCache;
+  info?: FileMetaData;
   blockSize?: number;
   bufferedAmountLowThreshold?: number;
   compressionLevel?: CompressionLevel;
@@ -106,7 +107,7 @@ export type ProgressValue = {
   received: number;
 };
 
-export type FileTransmitterEventMap = {
+export type FileTransfererEventMap = {
   progress: ProgressValue;
   complete: void;
   error: Error;
@@ -114,8 +115,20 @@ export type FileTransmitterEventMap = {
   close: void;
 };
 
-export class FileTransmitter {
-  private eventEmitter: MultiEventEmitter<FileTransmitterEventMap> =
+// export class FileSender {
+//   private eventEmitter: MultiEventEmitter<FileTransmitterEventMap> =
+//     new MultiEventEmitter();
+//   private blockSize = 128 * 1024;
+//   private bufferedAmountLowThreshold = 1024 * 1024;
+//   private sendData:SendData
+
+//   constructor() {
+
+//   }
+// }
+
+export class FileTransferer {
+  private eventEmitter: MultiEventEmitter<FileTransfererEventMap> =
     new MultiEventEmitter();
 
   channels: Array<RTCDataChannel> = [];
@@ -138,21 +151,21 @@ export class FileTransmitter {
       totalBlockNumber?: number;
     };
   } = {};
-  private readyInterval?: number;
+
   private controller: AbortController =
     new AbortController();
 
   private timer?: number;
-  private ready: PromiseWithResolvers<void> =
-    Promise.withResolvers<void>();
 
   get id() {
     return this.cache.id;
   }
 
+  private info: FileMetaData | null = null;
+
   readonly mode: TransferMode;
 
-  constructor(options: FileTransmitOptions) {
+  constructor(options: FileTransfererOptions) {
     const [status, setStatus] =
       createSignal<TransferStatus>(TransferStatus.New);
     this.status = status;
@@ -165,7 +178,7 @@ export class FileTransmitter {
     this.compressionLevel =
       options.compressionLevel ?? this.compressionLevel;
     this.mode = options.mode ?? TransferMode.Receive;
-
+    this.info = options.info ?? null;
     this.controller.signal.addEventListener(
       "abort",
       () => {
@@ -175,24 +188,45 @@ export class FileTransmitter {
     );
   }
 
-  public pause() {
-    if (this.status() === TransferStatus.Process) {
-      this.ready = Promise.withResolvers();
-      this.setStatus(TransferStatus.Ready);
-    }
-  }
+  public async setSendStatus(message: RequestFileMessage) {
+    if (!this.sendData) return;
+    const info = this.info;
+    if (!info) {
+      console.error(
+        `can not set send status, info is null`,
+      );
 
-  public setSendStatus(message: RequestFileMessage) {
-    if (this.sendData) {
-      const info = this.cache.info()!;
-      const chunkLength = Math.ceil(
-        info.fileSize / info.chunkSize,
-      );
-      rangesIterator(
-        getSubRanges(chunkLength, message.ranges),
-      ).forEach((index) =>
-        this.sendData?.indexes.add(index),
-      );
+      return;
+    }
+    const chunkLength = Math.ceil(
+      info.fileSize / info.chunkSize,
+    );
+    rangesIterator(
+      getSubRanges(chunkLength, message.ranges),
+    ).forEach((index) => this.sendData?.indexes.add(index));
+
+    this.updateProgress();
+  }
+  private updateProgress() {
+    const info = this.info;
+    if (!info) {
+      return;
+    }
+    if (this.mode === TransferMode.Receive) {
+      if (!this.receivedData) return;
+      this.dispatchEvent("progress", {
+        total: info.fileSize,
+        received: this.receivedData.receiveBytes,
+      });
+    } else {
+      if (!this.sendData) return;
+      this.dispatchEvent("progress", {
+        total: info.fileSize,
+        received: getRequestContentSize(
+          info,
+          this.sendData.indexes.values().toArray(),
+        ),
+      });
     }
   }
 
@@ -203,6 +237,18 @@ export class FileTransmitter {
       );
     }
     this.initialized = true;
+
+    if (!this.info) {
+      this.info = await this.cache.getInfo();
+    } else {
+      this.cache.setInfo(this.info);
+    }
+
+    if (!this.info) {
+      throw Error(
+        "transfer file info is not set correctly",
+      );
+    }
 
     if (this.mode === TransferMode.Receive) {
       const receivedData = {
@@ -215,30 +261,18 @@ export class FileTransmitter {
 
       const bytes = await this.cache.calcCachedBytes();
       receivedData.receiveBytes += bytes ?? 0;
-      const sendReady = async () => {
-        const channel =
-          await this.getRandomAvailableChannel();
-        channel.send(
-          JSON.stringify({
-            type: "ready",
-          } satisfies ReadyMessage),
-        );
-      };
-      sendReady();
-      this.readyInterval = window.setInterval(
-        sendReady,
-        1000,
-      );
     } else if (this.mode === TransferMode.Send) {
       this.sendData = {
         indexes: new Set(),
       };
     }
+    this.updateProgress();
+    this.dispatchEvent("ready", undefined);
   }
 
-  addEventListener<K extends keyof FileTransmitterEventMap>(
+  addEventListener<K extends keyof FileTransfererEventMap>(
     eventName: K,
-    handler: EventHandler<FileTransmitterEventMap[K]>,
+    handler: EventHandler<FileTransfererEventMap[K]>,
     options?: boolean | AddEventListenerOptions,
   ): void {
     return this.eventEmitter.addEventListener(
@@ -248,10 +282,10 @@ export class FileTransmitter {
     );
   }
   removeEventListener<
-    K extends keyof FileTransmitterEventMap,
+    K extends keyof FileTransfererEventMap,
   >(
     eventName: K,
-    handler: EventHandler<FileTransmitterEventMap[K]>,
+    handler: EventHandler<FileTransfererEventMap[K]>,
     options?: boolean | EventListenerOptions,
   ): void {
     return this.eventEmitter.removeEventListener(
@@ -262,8 +296,8 @@ export class FileTransmitter {
   }
 
   private dispatchEvent<
-    K extends keyof FileTransmitterEventMap,
-  >(eventName: K, event: FileTransmitterEventMap[K]) {
+    K extends keyof FileTransfererEventMap,
+  >(eventName: K, event: FileTransfererEventMap[K]) {
     return this.eventEmitter.dispatchEvent(
       eventName,
       event,
@@ -271,6 +305,8 @@ export class FileTransmitter {
   }
 
   public addChannel(channel: RTCDataChannel) {
+    console.log(`receiver add channel`, channel);
+
     const onClose = () => {
       channel.onmessage = null;
       const index = this.channels.findIndex(
@@ -294,22 +330,25 @@ export class FileTransmitter {
       once: true,
     });
 
-    const info = this.cache.info()!;
-
     const storeChunk = async (
       chunkIndex: number,
       chunkData: ArrayBufferLike,
     ) => {
+      const info = this.info;
+      if (!info) {
+        console.error(`can not store chunk, info is null`);
+
+        return;
+      }
       await this.cache.storeChunk(chunkIndex, chunkData);
       this.receivedData?.indexes.add(chunkIndex);
       if (this.receivedData) {
         this.receivedData.receiveBytes +=
           chunkData.byteLength;
-        this.dispatchEvent("progress", {
-          total: info.fileSize,
-          received: this.receivedData.receiveBytes,
-        });
       }
+
+      this.updateProgress();
+
       if (this.triggerReceiveComplete()) {
         window.clearInterval(this.timer);
       }
@@ -370,14 +409,12 @@ export class FileTransmitter {
 
     if (this.mode === TransferMode.Receive) {
       if (channel.readyState === "open") {
-        this.ready.resolve();
         this.dispatchEvent("ready", undefined);
         this.setStatus(TransferStatus.Ready);
       } else {
         channel.addEventListener(
           "open",
           () => {
-            this.ready.resolve();
             this.dispatchEvent("ready", undefined);
             this.setStatus(TransferStatus.Ready);
           },
@@ -386,16 +423,10 @@ export class FileTransmitter {
             once: true,
           },
         );
-        channel.addEventListener(
-          "close",
-          (err) => {
-            this.ready.reject(err);
-          },
-          {
-            signal: this.controller.signal,
-            once: true,
-          },
-        );
+        channel.addEventListener("close", (err) => {}, {
+          signal: this.controller.signal,
+          once: true,
+        });
       }
     }
 
@@ -436,7 +467,7 @@ export class FileTransmitter {
     if (this.mode === TransferMode.Send) return false;
     if (!this.receivedData) return false;
 
-    const info = this.cache.info();
+    const info = this.info;
     if (!info) return false;
 
     const chunkslength = Math.ceil(
@@ -485,6 +516,9 @@ export class FileTransmitter {
     bufferedAmountLowThreshold: number = this
       .bufferedAmountLowThreshold,
   ): Promise<RTCDataChannel> {
+    if (this.channels.length === 0) {
+      throw new Error("no channel");
+    }
     const channel = await Promise.any(
       this.channels.map((channel) => {
         channel.bufferedAmountLowThreshold =
@@ -497,7 +531,6 @@ export class FileTransmitter {
             ) {
               return reslove(channel);
             }
-
             channel.addEventListener(
               "bufferedamountlow",
               () => reslove(channel),
@@ -509,7 +542,10 @@ export class FileTransmitter {
           },
         );
       }),
-    );
+    ).catch((err) => {
+      console.error(err);
+      throw err;
+    });
     return channel;
   }
 
@@ -533,7 +569,7 @@ export class FileTransmitter {
       return;
     }
 
-    const info = this.cache.info();
+    const info = this.info;
     if (!info) {
       this.dispatchEvent(
         "error",
@@ -600,17 +636,10 @@ export class FileTransmitter {
 
         channel.send(packet);
       }
-      if (this.sendData) {
-        this.sendData.indexes.add(chunkIndex);
 
-        this.dispatchEvent("progress", {
-          total: info.fileSize,
-          received: getRequestContentSize(
-            info,
-            this.sendData.indexes.values().toArray(),
-          ),
-        });
-      }
+      this.sendData?.indexes.add(chunkIndex);
+
+      this.updateProgress();
     };
     let queue = Promise.resolve();
     function enqueueTask(task: () => Promise<void>) {
@@ -660,10 +689,10 @@ export class FileTransmitter {
     event: MessageEvent,
     unzipCB: (packet: ArrayBuffer) => void,
   ) {
-    if (this.readyInterval) {
-      clearInterval(this.readyInterval);
-      this.readyInterval = undefined;
-    }
+    // if (this.readyInterval) {
+    //   clearInterval(this.readyInterval);
+    //   this.readyInterval = undefined;
+    // }
     try {
       this.setStatus(TransferStatus.Process);
 
@@ -679,7 +708,7 @@ export class FileTransmitter {
             }
           }
         } else {
-          const info = this.cache.info();
+          const info = this.info;
           if (!info) return;
           let packet: ArrayBuffer | Blob = event.data;
 
@@ -706,18 +735,8 @@ export class FileTransmitter {
                 (index) =>
                   this.sendData?.indexes.delete(index),
               );
-              const info = this.cache.info();
-              if (info) {
-                this.dispatchEvent("progress", {
-                  total: info.fileSize,
-                  received: getRequestContentSize(
-                    info,
-                    this.sendData.indexes
-                      .values()
-                      .toArray(),
-                  ),
-                });
-              }
+
+              this.updateProgress();
             }
             this.sendFile(message.ranges);
           } else {
@@ -729,7 +748,7 @@ export class FileTransmitter {
           this.setStatus(TransferStatus.Complete);
           this.dispatchEvent("complete", undefined);
         } else if (message.type === "ready") {
-          this.ready?.resolve();
+          // this.ready?.resolve();
           this.dispatchEvent("ready", undefined);
         }
       }

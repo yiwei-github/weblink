@@ -77,6 +77,10 @@
         "title": "压缩级别",
         "description": "更改发送端的压缩级别，0 表示无压缩，9 表示最大压缩，对于已压缩的文件，启用此选项可能会降低传输速度",
         "no_compression": "0 (无压缩)"
+      },
+      "automatic_cache_deletion": {
+        "title": "自动删除缓存",
+        "description": "发送完成后自动删除缓存"
       }
     },
     "receiver": {
@@ -84,6 +88,10 @@
       "max_cached_chunks": {
         "title": "最大缓存块数",
         "description": "更改接收端的最大缓存块数"
+      },
+      "automatic_download": {
+        "title": "自动下载",
+        "description": "接收完成后自动下载"
       }
     },
     "media": {
@@ -105,6 +113,15 @@
         "title": "请求媒体权限",
         "description": "请求媒体权限以使用媒体设置，如果请求权限后无法选择媒体设备，请尝试刷新页面",
         "fallback_description": "请允许浏览器使用摄像头和麦克风"
+      }
+    },
+    "advanced_settings": {
+      "title": "高级设置",
+      "advanced_sender": {
+        "title": "高级文件发送设置"
+      },
+      "advanced_receiver": {
+        "title": "高级文件接收设置"
       }
     },
     "about": {
@@ -263,6 +280,7 @@
     },
     "notification": {
       "copy_success": "复制成功",
+      "link_copy_success": "链接复制成功",
       "copy_failed": "复制失败",
       "reset_options_success": "选项重置成功",
       "unknown_error": "未知错误"

@@ -14,7 +14,6 @@ import {
   IconArrowDownward,
   IconArrowUpward,
   IconClose,
-  IconClose700,
   IconUnfoldMore,
   IconVisibilityOff,
 } from "../icons";
@@ -30,7 +29,11 @@ export function DataTableColumnHeader<TData, TValue>(
   props: DataTableColumnHeaderProps<TData, TValue>,
 ) {
   if (!props.column.getCanSort()) {
-    return <div class={cn(props.class)}>{props.title}</div>;
+    return (
+      <div class={cn("text-nowrap", props.class)}>
+        {props.title}
+      </div>
+    );
   }
 
   return (

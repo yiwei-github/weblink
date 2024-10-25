@@ -1,5 +1,6 @@
 import { FileMetaData } from "@/libs/cache/chunk-cache";
 import {
+  batch,
   createEffect,
   createMemo,
   createSignal,
@@ -38,6 +39,7 @@ import {
   RowSelectionState,
   SortingState,
   VisibilityState,
+  Table as SolidTable,
 } from "@tanstack/solid-table";
 import { getCommonPinningStyles } from "@/components/data-table/data-table-pin-style";
 import {
@@ -107,10 +109,9 @@ const createComfirmDialog = () => {
 
   return { open, Component };
 };
+const columnHelper = createColumnHelper<FileMetaData>();
 
 export default function File() {
-  const columnHelper = createColumnHelper<FileMetaData>();
-
   const {
     open: openPreviewDialog,
     Component: PreviewDialogComponent,
@@ -169,6 +170,7 @@ export default function File() {
         </p>
       ),
       enableGlobalFilter: true,
+      enableSorting: false,
     }),
     columnHelper.accessor("fileSize", {
       header: ({ column }) => (
@@ -249,23 +251,21 @@ export default function File() {
             <DropdownMenuContent class="w-48">
               <Show when={row.original.file}>
                 {(file) => (
-                  <DropdownMenuItem
-                    class="gap-2"
-                    onSelect={() => {
-                      const a = document.createElement("a");
-                      a.href = URL.createObjectURL(file());
-                      a.download = file().name;
-                      a.click();
-                    }}
-                  >
-                    <IconDownload class="size-4" />
-                    {t("common.action.download")}
-                  </DropdownMenuItem>
-                )}
-              </Show>
-              <Show when={row.original.file}>
-                {(file) => (
                   <>
+                    <DropdownMenuItem
+                      class="gap-2"
+                      onSelect={() => {
+                        const a =
+                          document.createElement("a");
+                        a.href =
+                          URL.createObjectURL(file());
+                        a.download = file().name;
+                        a.click();
+                      }}
+                    >
+                      <IconDownload class="size-4" />
+                      {t("common.action.download")}
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       class="gap-2"
                       onSelect={() => {
@@ -298,7 +298,6 @@ export default function File() {
                   </>
                 )}
               </Show>
-
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 class="gap-2"
@@ -319,8 +318,6 @@ export default function File() {
     }),
   ];
 
-  const caches = cacheManager.caches;
-
   const [storage, setStorage] =
     createSignal<StorageEstimate | null>(null);
 
@@ -333,12 +330,7 @@ export default function File() {
 
   const [columnFilters, setColumnFilters] =
     createSignal<ColumnFiltersState>([]);
-  const data = createMemo(
-    () =>
-      Object.values(caches)
-        .map((cache) => cache.info())
-        .filter((info) => info) as FileMetaData[],
-  );
+
   const [globalFilter, setGlobalFilter] = createSignal("");
   const [rowSelection, setRowSelection] =
     createSignal<RowSelectionState>({});
@@ -354,7 +346,13 @@ export default function File() {
     [],
   );
 
-  const table = createSolidTable({
+  const data = createMemo(() =>
+    cacheManager.status() === "ready"
+      ? Object.values(cacheManager.cacheInfo)
+      : [],
+  );
+
+  const table: SolidTable<FileMetaData> = createSolidTable({
     get data() {
       return data();
     },
@@ -380,7 +378,6 @@ export default function File() {
       },
     },
     onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: "includesString",
     onColumnPinningChange: setColumnPinning,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
@@ -390,10 +387,12 @@ export default function File() {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
+    // getFacetedUniqueValues: getFacetedUniqueValues(),
+    // getFacetedMinMaxValues: getFacetedMinMaxValues(),
 
     getRowId: (row) => row.id,
+
+    // debugAll: true,
   });
 
   const [tableBody, setTableBody] = createSignal<
@@ -461,7 +460,7 @@ export default function File() {
                   class="gap-2"
                   onSelect={() => {
                     table
-                      .getSelectedRowModel()
+                      ?.getSelectedRowModel()
                       .rows.forEach((row) => {
                         const a =
                           document.createElement("a");
@@ -472,7 +471,7 @@ export default function File() {
                         a.download = row.original.fileName;
                         a.click();
                       });
-                    table.resetRowSelection();
+                    table?.resetRowSelection();
                   }}
                 >
                   <IconDownload class="size-4" />
@@ -509,9 +508,8 @@ export default function File() {
             tabIndex="0"
             class={cn(
               inputClass,
-              `flex w-full max-w-md items-center gap-2 bg-background/80
-              px-2 backdrop-blur focus-within:ring-1
-              focus-within:ring-ring`,
+              `flex w-full max-w-md items-center gap-2 px-2
+              focus-within:ring-1 focus-within:ring-ring`,
             )}
           >
             <IconSearch700 class="size-5 text-muted-foreground" />
@@ -605,19 +603,18 @@ export default function File() {
                         {(cell, index) => (
                           <TableCell
                             ref={(ref) => {
-                              createEffect(() => {
-                                if (rowIndex() === 0) {
+                              if (rowIndex() === 0) {
+                                batch(() => {
                                   setTableCellSizes(
                                     index(),
                                     undefined!,
                                   );
-
                                   setTableCellSizes(
                                     index(),
                                     createElementSize(ref),
                                   );
-                                }
-                              });
+                                });
+                              }
                             }}
                             class={cn(
                               cell.column.getIsPinned() &&

@@ -12,17 +12,6 @@ export default function NotFound(props: RouteSectionProps) {
         {t("404.title")}
       </h1>
       <p>{t("404.description", { path: props.params.path })}</p>
-      {/* <p>
-        Visit{" "}
-        <a
-          href="https://solidjs.com"
-          target="_blank"
-          class="text-sky-600 hover:underline"
-        >
-          solidjs.com
-        </a>{" "}
-        to learn how to build Solid apps.
-      </p> */}
       <p class="my-4">
         <Button as={A} href="/" variant="outline" class="">
           {t("404.home")}

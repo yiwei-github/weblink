@@ -23,7 +23,8 @@ export interface FileMetaData extends ChunkMetaData {
 
 export type ChunkCacheEventMap = {
   cleanup: void;
-  merged: void;
+  update: FileMetaData | null;
+  merged: File;
   merging: void;
 };
 
@@ -40,9 +41,7 @@ export interface ChunkCache {
   ): void;
 
   readonly id: string;
-
-  info: Accessor<FileMetaData | null>;
-
+  initialize(): Promise<void>;
   storeChunk(
     chunckIndex: number,
     data: ArrayBufferLike,
@@ -66,9 +65,7 @@ export interface IDBChunkCacheOptions {
 
 export class IDBChunkCache implements ChunkCache {
   static DBNAME_PREFIX: string = "file-";
-  info: Accessor<FileMetaData | null>;
-  private infoSetter: Setter<FileMetaData | null>;
-  private db: Promise<IDBDatabase> | IDBDatabase;
+  private db: IDBDatabase | null = null;
   private status: "storing" | "merging" | "done" | "error" =
     "storing";
 
@@ -84,15 +81,28 @@ export class IDBChunkCache implements ChunkCache {
     appOptions.maxMomeryCacheSlices;
   constructor(options: IDBChunkCacheOptions) {
     this.id = options.id;
-
-    const [info, setInfo] =
-      createSignal<FileMetaData | null>(null);
-
-    this.info = info;
-    this.infoSetter = setInfo;
-
-    this.db = this.initDB();
   }
+
+  async initialize() {
+    if (this.db) {
+      console.warn(`db has already initialized`);
+      return;
+    }
+    this.db = await this.initDB();
+    const done = await this.isDone();
+    this.isEmpty();
+    const info = await this.getInfo();
+    if (info) {
+      this.dispatchEvent("update", info);
+    }
+
+    if (done) {
+      if (info?.file) {
+        this.status = "done";
+      }
+    }
+  }
+
   addEventListener<K extends keyof ChunkCacheEventMap>(
     eventName: K,
     handler: EventHandler<ChunkCacheEventMap[K]>,
@@ -191,39 +201,26 @@ export class IDBChunkCache implements ChunkCache {
   }
 
   private async initDB() {
-    return new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(
-        `${IDBChunkCache.DBNAME_PREFIX}${this.id}`,
-      );
+    return await new Promise<IDBDatabase>(
+      (resolve, reject) => {
+        const request = indexedDB.open(
+          `${IDBChunkCache.DBNAME_PREFIX}${this.id}`,
+        );
 
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        db.createObjectStore("info", {
-          keyPath: "id",
-        });
-        db.createObjectStore(this.id, {
-          keyPath: "chunkIndex",
-        });
-      };
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          db.createObjectStore("info", {
+            keyPath: "id",
+          });
+          db.createObjectStore("chunks", {
+            keyPath: "chunkIndex",
+          });
+        };
 
-      request.onsuccess = async () => {
-        const db = request.result;
-        resolve(db);
-        const done = await this.isDone();
-        this.isEmpty();
-        const info = await this.getInfo();
-
-        if (done) {
-          if (info?.file) {
-            this.status = "done";
-          }
-        }
-      };
-
-      request.onerror = () => {
-        reject(request.error);
-      };
-    });
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      },
+    );
   }
 
   async isEmpty() {
@@ -264,28 +261,35 @@ export class IDBChunkCache implements ChunkCache {
   }
 
   private async getChunkStore(mode?: IDBTransactionMode) {
-    const db = await this.db;
-    const transaction = db.transaction(this.id, mode);
+    const db = this.db;
+    if (!db) {
+      throw new Error("db is not initialized");
+    }
+    const transaction = db.transaction("chunks", mode);
 
-    const store = transaction.objectStore(this.id);
+    const store = transaction.objectStore("chunks");
 
     return store;
   }
 
   private async getInfoStore(mode?: IDBTransactionMode) {
-    const db = await this.db;
+    const db = this.db;
+    if (!db) {
+      throw new Error("db is not initialized");
+    }
     const transaction = db.transaction("info", mode);
     const store = transaction.objectStore("info");
     return store;
   }
 
   public async setInfo(data: FileMetaData): Promise<void> {
-    this.infoSetter(data);
     const store = await this.getInfoStore("readwrite");
     const request = store.put(data);
     return new Promise(async (resolve, reject) => {
       request.onsuccess = () => {
         resolve();
+
+        this.dispatchEvent("update", data);
       };
       request.onerror = () => reject(request.error);
     });
@@ -297,7 +301,6 @@ export class IDBChunkCache implements ChunkCache {
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
         const info = request.result ?? null;
-        this.infoSetter(info);
         resolve(info);
       };
       request.onerror = () => reject(request.error);
@@ -347,7 +350,7 @@ export class IDBChunkCache implements ChunkCache {
     chunkIndex: number,
   ): Promise<ArrayBuffer | null> {
     await this.flush();
-    const info = this.info();
+    const info = await this.getInfo();
     const file = info?.file;
     if (info && file) {
       // 发送特定的数据块
@@ -400,9 +403,12 @@ export class IDBChunkCache implements ChunkCache {
   }
 
   public async cleanup(): Promise<void> {
-    const db = await this.db;
+    const db = this.db;
+    if (!db) {
+      throw new Error("db is not initialized");
+    }
     const dbName = db.name;
-    db.close(); // 关闭数据库连接
+    db.close();
     const request = indexedDB.deleteDatabase(dbName);
     await new Promise<void>((resolve, reject) => {
       request.onsuccess = () => {
@@ -410,7 +416,6 @@ export class IDBChunkCache implements ChunkCache {
           `Database ${dbName} deleted successfully.`,
         );
 
-        this.infoSetter(null);
         this.dispatchEvent("cleanup", undefined);
         resolve();
       };
@@ -478,7 +483,7 @@ export class IDBChunkCache implements ChunkCache {
 
           reslove(file);
           this.status = "done";
-          this.dispatchEvent("merged", undefined);
+          this.dispatchEvent("merged", file);
         };
 
         request.onerror = (err) => reject(err);
@@ -513,7 +518,7 @@ export class IDBChunkCache implements ChunkCache {
             store.clear();
             reslove(file);
             this.status = "done";
-            this.dispatchEvent("merged", undefined);
+            this.dispatchEvent("merged", file);
           }
         };
 

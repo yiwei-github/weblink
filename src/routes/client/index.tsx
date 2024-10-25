@@ -17,7 +17,7 @@ const Client: Component = (props) => {
   return (
     <div class="relative h-full w-full">
       <Switch>
-        <Match
+        {/* <Match
           when={
             sessionService.clientServiceStatus() ===
             "connected"
@@ -63,7 +63,7 @@ const Client: Component = (props) => {
               {t("chat.index.description")}
             </p>
           </div>
-        </Match>
+        </Match> */}
         <Match
           when={
             sessionService.clientServiceStatus() ===
@@ -72,10 +72,11 @@ const Client: Component = (props) => {
         >
           <div
             class="absolute left-1/2 top-1/2 flex -translate-x-1/2
-              -translate-y-1/2 flex-col items-center text-center"
+              -translate-y-1/2 flex-col items-center text-center
+              backdrop-blur p-4"
           >
             <div class="flex flex-col items-center gap-2">
-              <p class="large">
+              <p class="text-xl font-bold">
                 {t("chat.index.guide_title")}
               </p>
               <p class="text-sm">

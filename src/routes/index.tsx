@@ -149,11 +149,18 @@ export default function Home(props: RouteSectionProps) {
                           -translate-y-1/2 flex-col items-center"
                       >
                         <IconPerson class="text-muted/50" />
-                        <p class="muted sm:hidden">
-                          {t(
-                            "chat.index.guide_description",
-                          )}
-                        </p>
+                        <Show
+                          when={
+                            sessionService.clientServiceStatus() ===
+                            "disconnected"
+                          }
+                        >
+                          <p class="muted sm:hidden">
+                            {t(
+                              "chat.index.guide_description",
+                            )}
+                          </p>
+                        </Show>
                       </div>
                     </div>
                   }

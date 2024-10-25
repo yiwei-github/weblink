@@ -46,6 +46,7 @@ import {
 } from "./options";
 import { MetaProvider, Style } from "@solidjs/meta";
 import { cacheManager } from "./libs/services/cache-serivce";
+import { Input } from "./components/ui/input";
 let wakeLock: WakeLockSentinel | null = null;
 const requestWakeLock = async () => {
   if (wakeLock && wakeLock.released === false) {
@@ -75,7 +76,7 @@ const createQRCodeDialog = () => {
             .writeText(url)
             .then(() => {
               toast.success(
-                t("common.notification.copy_success"),
+                t("common.notification.link_copy_success"),
               );
             })
             .catch(() => {
@@ -103,6 +104,22 @@ const createQRCodeDialog = () => {
                 light="#00000000"
               />
             </div>
+            <Input
+              class="h-8 w-full select-all whitespace-pre-wrap break-all
+                text-center text-xs hover:underline"
+              onContextMenu={async (e) => {
+                e.preventDefault();
+                await navigator.clipboard.writeText(
+                  joinUrl(),
+                );
+                toast.success(
+                  t(
+                    "common.notification.link_copy_success",
+                  ),
+                );
+              }}
+              value={joinUrl()}
+            />
             <p>
               {t("common.scan_qrcode_dialog.description")}
             </p>

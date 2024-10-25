@@ -20,7 +20,7 @@ import { PeerSession } from "./session";
 import {
   TRANSFER_CHANNEL_PREFIX,
   TransferMode,
-} from "./file-transmitter";
+} from "./file-transferer";
 import { v4 } from "uuid";
 import { clientProfile } from "./store";
 import { cacheManager } from "../services/cache-serivce";
@@ -29,15 +29,18 @@ import { getRangesLength } from "../utils/range";
 import { ClientService } from "./services/type";
 
 import {
+  CheckMessage,
   messageStores,
   RequestFileMessage,
   SendFileMessage,
   SendTextMessage,
+  SessionMessage,
 } from "./messge";
 import { sessionService } from "../services/session-service";
 import { WebSocketClientService } from "./services/client/ws-client-service";
 import { appOptions } from "@/options";
 import { aw } from "vitest/dist/chunks/reporters.DAfKSDh5.js";
+import { FileMetaData } from "../cache/chunk-cache";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -137,6 +140,135 @@ export const WebRTCProvider: Component<
 
   // targetClientId, connection
 
+  async function handleMessage(
+    session: PeerSession,
+    message: SessionMessage,
+  ) {
+    messageStores.setMessage(message);
+
+    if (message.type === "send-text") {
+      const replyMessage = {
+        type: "check-message",
+        id: message.id,
+        createdAt: Date.now(),
+        client: message.target,
+        target: message.client,
+      } satisfies CheckMessage;
+
+      session.sendMessage(replyMessage);
+    } else if (message.type === "send-file") {
+      const cache = await cacheManager.createCache(
+        message.fid,
+      );
+
+      const receiveInfo = {
+        fileName: message.fileName,
+        fileSize: message.fileSize,
+        mimetype: message.mimeType,
+        lastModified: message.lastModified,
+        chunkSize: message.chunkSize,
+        createdAt: message.createdAt,
+        id: message.fid,
+      } satisfies FileMetaData;
+
+      const transferer = transferManager.createTransfer(
+        cache,
+        TransferMode.Receive,
+        receiveInfo,
+      );
+
+      messageStores.addTransfer(transferer);
+      await transferer.initialize();
+
+      const replyMessage = {
+        type: "check-message",
+        id: message.id,
+        createdAt: Date.now(),
+        client: message.target,
+        target: message.client,
+      } satisfies CheckMessage;
+
+      session.sendMessage(replyMessage);
+    } else if (message.type === "request-file") {
+      const cache = cacheManager.getCache(message.fid);
+      // if (!cache?.getInfo()?.file) return;
+      if (!cache) {
+        console.warn(`cache ${message.fid} not found`);
+
+        return;
+      }
+
+      const transferer = transferManager.createTransfer(
+        cache,
+        TransferMode.Send,
+      );
+      messageStores.addTransfer(transferer);
+
+      for (let i = 0; i < appOptions.channelsNumber; i++) {
+        const channel = await session.createChannel(
+          `${TRANSFER_CHANNEL_PREFIX}${transferer.id}${v4()}`,
+        );
+
+        if (channel) {
+          transferManager.addChannel(cache.id, channel);
+        }
+      }
+
+      await transferer.initialize();
+      transferer.setSendStatus(message);
+      await transferer.sendFile(message.ranges);
+    } else if (message.type === "check-message") {
+      const index = messageStores.messages.findIndex(
+        (msg) => msg.id === message.id,
+      );
+      if (index === -1) {
+        console.warn(
+          `check message ${message.id} not found`,
+        );
+        return;
+      }
+      const storeMessage = messageStores.messages[index];
+      if (storeMessage.type === "file") {
+        const cache = cacheManager.getCache(
+          storeMessage.fid,
+        );
+        if (!cache) {
+          console.warn(
+            `cache ${storeMessage.fid} not found`,
+          );
+          return;
+        }
+        const transferer = transferManager.createTransfer(
+          cache,
+          TransferMode.Send,
+        );
+
+        messageStores.addTransfer(transferer);
+
+        for (
+          let i = 0;
+          i < appOptions.channelsNumber;
+          i++
+        ) {
+          const channel = await session.createChannel(
+            `${TRANSFER_CHANNEL_PREFIX}${transferer.id}${v4()}`,
+          );
+          // console.log(`create channel`, channel);
+
+          if (channel) {
+            transferManager.addChannel(
+              storeMessage.fid,
+              channel,
+            );
+          }
+        }
+
+        await transferer.initialize();
+        await transferer.sendFile();
+      }
+    }
+  }
+
   const joinRoom = async (): Promise<void> => {
     console.log(`join room`, clientProfile);
 
@@ -157,7 +289,10 @@ export const WebRTCProvider: Component<
 
     sessionService.setClientService(cs);
 
-    await cs.createClient();
+    await cs.createClient().catch((err) => {
+      sessionService.destoryService();
+      throw err;
+    });
 
     cs.listenForJoin(
       async (targetClient: TransferClient) => {
@@ -227,129 +362,7 @@ export const WebRTCProvider: Component<
 
         session.addEventListener("message", async (ev) => {
           const message = ev.detail;
-          messageStores.setMessage(message, session);
-
-          if (message.type === "send-text") {
-            return;
-          } else if (message.type === "send-file") {
-            const cache = cacheManager.createCache(
-              message.fid,
-            );
-            cache.setInfo({
-              fileName: message.fileName,
-              fileSize: message.fileSize,
-              mimetype: message.mimeType,
-              lastModified: message.lastModified,
-              chunkSize: message.chunkSize,
-              createdAt: message.createdAt,
-              id: message.fid,
-            });
-            const transferer =
-              transferManager.createTransfer(
-                cache,
-                TransferMode.Receive,
-              );
-
-            if (messageStores.addTransfer(transferer)) {
-              await transferer.initialize();
-            }
-          } else if (message.type === "request-file") {
-            const cache = cacheManager.getCache(
-              message.fid,
-            );
-            // if (!cache?.getInfo()?.file) return;
-            if (!cache) {
-              console.warn(
-                `cache ${message.fid} not found`,
-              );
-
-              return;
-            }
-            const transferer =
-              transferManager.createTransfer(
-                cache,
-                TransferMode.Send,
-              );
-            if (!messageStores.addTransfer(transferer)) {
-              console.warn(
-                `can not add transfer ${transferer.id}, return`,
-              );
-            }
-
-            for (
-              let i = 0;
-              i < appOptions.channelsNumber;
-              i++
-            ) {
-              const channel = await session.createChannel(
-                `${TRANSFER_CHANNEL_PREFIX}${transferer.id}${v4()}`,
-              );
-              if (channel) {
-                transferManager.addChannel(
-                  cache.id,
-                  channel,
-                );
-              }
-            }
-
-            await transferer.initialize();
-            transferer.setSendStatus(message);
-            await transferer.sendFile(message.ranges);
-          } else if (message.type === "check-message") {
-            const index = messageStores.messages.findIndex(
-              (msg) => msg.id === message.id,
-            );
-            if (index === -1) {
-              console.warn(
-                `check message ${message.id} not found`,
-              );
-              return;
-            }
-            const storeMessage =
-              messageStores.messages[index];
-            if (storeMessage.type === "file") {
-              const cache = cacheManager.getCache(
-                storeMessage.fid,
-              );
-              if (!cache) {
-                console.warn(
-                  `cache ${storeMessage.fid} not found`,
-                );
-                return;
-              }
-              const transferer =
-                transferManager.createTransfer(
-                  cache,
-                  TransferMode.Send,
-                );
-
-              if (!messageStores.addTransfer(transferer)) {
-                console.warn(
-                  `can not add transfer ${transferer.id}, return`,
-                );
-                return;
-              }
-
-              for (
-                let i = 0;
-                i < appOptions.channelsNumber;
-                i++
-              ) {
-                const channel = await session.createChannel(
-                  `${TRANSFER_CHANNEL_PREFIX}${transferer.id}${v4()}`,
-                );
-                if (channel) {
-                  transferManager.addChannel(
-                    storeMessage.fid,
-                    channel,
-                  );
-                }
-              }
-
-              await transferer.initialize();
-              await transferer.sendFile();
-            }
-          }
+          handleMessage(session, message);
         });
 
         session.addEventListener("channel", (ev) => {
@@ -374,7 +387,14 @@ export const WebRTCProvider: Component<
               fileIdWithChannelId.startsWith(fileId),
             );
 
-            if (!fileId) return;
+            if (!fileId) {
+              console.warn(
+                `can not find receiver for file`,
+                fileIdWithChannelId,
+              );
+
+              return;
+            }
             console.log(
               `receive channel for file ${fileId}`,
             );
@@ -554,7 +574,7 @@ export const WebRTCProvider: Component<
       createdAt: Date.now(),
     } as SendTextMessage;
     session.sendMessage(message);
-    messageStores.setMessage(message, session);
+    messageStores.setMessage(message);
     console.log(`send text message`, message);
   };
 
@@ -579,10 +599,9 @@ export const WebRTCProvider: Component<
       chunkSize: appOptions.chunkSize,
     } satisfies SendFileMessage;
 
-    messageStores.setMessage(message, session);
-    session.sendMessage(message);
-
-    const cache = cacheManager.createCache(message.fid);
+    const cache = await cacheManager.createCache(
+      message.fid,
+    );
     cache.setInfo({
       fileName: message.fileName,
       fileSize: message.fileSize,
@@ -595,6 +614,8 @@ export const WebRTCProvider: Component<
     });
 
     console.log(`send file message`, message);
+    messageStores.setMessage(message);
+    session.sendMessage(message);
   };
 
   const send = async (
@@ -662,9 +683,7 @@ export const WebRTCProvider: Component<
       TransferMode.Receive,
     );
 
-    if (!messageStores.addTransfer(transferer)) {
-      return;
-    }
+    messageStores.addTransfer(transferer);
 
     await transferer.initialize();
 
@@ -678,10 +697,9 @@ export const WebRTCProvider: Component<
       createdAt: Date.now(),
     } satisfies RequestFileMessage;
 
-    messageStores.setMessage(message, session);
-    session.sendMessage(message);
-
     await transferer.initialize();
+    messageStores.setMessage(message);
+    session.sendMessage(message);
   };
 
   return (

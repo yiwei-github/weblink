@@ -77,6 +77,10 @@
         "title": "Compression Level",
         "description": "Change the compression level of the sender, 0 means no compression, 9 means maximum compression, enabling this option may reduce the transfer speed for compressed files",
         "no_compression": "0 (No Compression)"
+      },
+      "automatic_cache_deletion": {
+        "title": "Automatic cache deletion",
+        "description": "Automatically deletes cache after sending"
       }
     },
     "receiver": {
@@ -84,6 +88,10 @@
       "max_cached_chunks": {
         "title": "Max Cached Chunks",
         "description": "Change the max cached chunks of the receiver"
+      },
+      "automatic_download": {
+        "title": "Automatic download",
+        "description": "Automatic download after receiving"
       }
     },
     "media": {
@@ -110,6 +118,15 @@
     "about": {
       "title": "About",
       "reset_options": "Reset Options"
+    },
+    "advanced_settings": {
+      "title": "Advanced Settings",
+      "advanced_sender": {
+        "title": "Advanced File Sender Settings"
+      },
+      "advanced_receiver": {
+        "title": "Advanced File Recevier Settings"
+      }
     }
   },
   "cache": {
@@ -244,7 +261,8 @@
       "set_as_background": "Set as Background"
     },
     "notification": {
-      "copy_success": "Link copied",
+      "copy_success": "Copy success",
+      "link_copy_success": "Link copied",
       "copy_failed": "Failed to copy link",
       "reset_options_success": "Options reset successfully",
       "unknown_error": "Unknown error"

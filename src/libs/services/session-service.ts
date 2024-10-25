@@ -72,6 +72,11 @@ class SessionService {
     );
   }
 
+  destoryService() {
+    this.service?.destroy();
+    this.service = undefined;
+  }
+
   destorySession(target: ClientID) {
     const session = this.sessions[target];
     if (!session) {

@@ -1,6 +1,6 @@
-import { isServer } from "solid-js/web";
 import {
   ChunkCache,
+  FileMetaData,
   IDBChunkCache,
 } from "../cache/chunk-cache";
 import {
@@ -10,9 +10,16 @@ import {
 import {
   createStore,
   SetStoreFunction,
+  StoreSetter,
 } from "solid-js/store";
 import { FileID } from "../core/type";
-import { Accessor, createSignal, Setter } from "solid-js";
+import {
+  Accessor,
+  batch,
+  createSignal,
+  Setter,
+} from "solid-js";
+import { appOptions } from "@/options";
 
 type EventMap = {
   update: string;
@@ -24,14 +31,18 @@ class FileCacheFactory {
   private setStatus: Setter<"ready" | "loading">;
   private eventEmitter: MultiEventEmitter<EventMap> =
     new MultiEventEmitter();
-
+  readonly cacheInfo: Record<FileID, FileMetaData>;
+  private setCacheInfo: SetStoreFunction<
+    Record<FileID, FileMetaData>
+  >;
   readonly caches: Record<FileID, ChunkCache>;
   private setCaches: SetStoreFunction<
     Record<FileID, ChunkCache>
   >;
   constructor() {
-    const [caches, setCaches] =
-      createStore<Record<FileID, ChunkCache>>();
+    const [caches, setCaches] = createStore<
+      Record<FileID, ChunkCache>
+    >({});
     this.caches = caches;
     this.setCaches = setCaches;
     this.update();
@@ -40,6 +51,11 @@ class FileCacheFactory {
     >("loading");
     this.status = status;
     this.setStatus = setStatus;
+    const [cacheInfo, setCacheInfo] = createStore<
+      Record<FileID, FileMetaData>
+    >({});
+    this.cacheInfo = cacheInfo;
+    this.setCacheInfo = setCacheInfo;
   }
 
   addEventListener<K extends keyof EventMap>(
@@ -73,20 +89,23 @@ class FileCacheFactory {
   }
 
   async update() {
-    if (isServer) return;
     const databases = await indexedDB.databases();
 
-    for (const db of databases) {
-      if (
-        db.name?.startsWith(IDBChunkCache.DBNAME_PREFIX)
-      ) {
-        const id = db.name.substring(
+    const fileDBs = databases
+      .filter((db) =>
+        db.name?.startsWith(IDBChunkCache.DBNAME_PREFIX),
+      )
+      .map((db) =>
+        db.name!.substring(
           IDBChunkCache.DBNAME_PREFIX.length,
-        );
-        this.createCache(id);
-      }
-    }
-    this.setStatus("ready");
+        ),
+      );
+
+    Promise.all(
+      fileDBs.map((id) => this.createCache(id)),
+    ).then(() => {
+      this.setStatus("ready");
+    });
   }
 
   getCache(id: FileID): ChunkCache | null {
@@ -105,7 +124,7 @@ class FileCacheFactory {
     return;
   }
 
-  createCache(id: FileID): ChunkCache {
+  async createCache(id: FileID): Promise<ChunkCache> {
     if (this.caches[id]) {
       console.warn(`cache ${id} has already created`);
       return this.caches[id];
@@ -114,16 +133,25 @@ class FileCacheFactory {
     const cache = new IDBChunkCache({
       id,
     });
-    cache.addEventListener(
-      "cleanup",
-      () => {
-        this.setCaches(id, undefined!);
-        this.dispatchEvent("cleanup", id);
-      },
-      { once: true },
-    );
+    cache.addEventListener("update", (ev) => {
+      this.setCacheInfo(id, ev.detail ?? undefined!);
+    });
+    cache.addEventListener("cleanup", () => {
+      this.setCacheInfo(id, undefined!);
+      this.setCaches(id, undefined!);
+    });
+    cache.addEventListener("merged", (ev) => {
+      if (appOptions.automaticDownload) {
+        const file = ev.detail;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(file);
+        a.download = file.name;
+        a.click();
+      }
+    });
+    await cache.initialize();
+    // const info = (await cache.getInfo()) ?? undefined;
     this.setCaches(id, cache);
-    this.dispatchEvent("update", id);
     return cache;
   }
 }
