@@ -81,7 +81,7 @@ export const getDefaultAppOptions = () => {
     showAboutDialog: true,
     shareServersWithOthers: false,
     backgroundImageOpacity: 0.5,
-    automaticDownload: true,
+    automaticDownload: false,
   } satisfies AppOption;
 };
 
