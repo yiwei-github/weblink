@@ -95,6 +95,7 @@ export interface ClientServiceInitOptions {
   roomId: string;
   password: string | null;
   client: Client;
+  websocketUrl?: string;
 }
 
 export type TransferClient = Client & { createdAt: number };

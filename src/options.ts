@@ -45,19 +45,20 @@ export type AppOption = {
   compressionLevel: CompressionLevel;
   blockSize: number;
 
-  // Stream
-  videoMaxBitrate: number;
-  audioMaxBitrate: number;
-
   // Connection
   servers: ConnectionOptions;
   shareServersWithOthers: boolean;
+  websocketUrl?: string;
 
   // Appearance
   locale: Locale;
   showAboutDialog: boolean;
   backgroundImage?: FileID;
   backgroundImageOpacity: number;
+
+  // Stream
+  videoMaxBitrate: number;
+  audioMaxBitrate: number;
 };
 
 export const getDefaultAppOptions = () => {
@@ -82,6 +83,7 @@ export const getDefaultAppOptions = () => {
     shareServersWithOthers: false,
     backgroundImageOpacity: 0.5,
     automaticDownload: false,
+    websocketUrl: import.meta.env.VITE_WEBSOCKET_URL,
   } satisfies AppOption;
 };
 

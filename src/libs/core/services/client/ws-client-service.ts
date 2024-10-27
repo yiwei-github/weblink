@@ -41,6 +41,7 @@ export class WebSocketClientService
   private maxReconnectAttempts = 3;
   private reconnectAttempts = 0;
   private reconnectInterval = 5000;
+  private websocketUrl: string;
 
   get info() {
     return this.client;
@@ -50,11 +51,13 @@ export class WebSocketClientService
     roomId,
     password,
     client,
+    websocketUrl,
   }: ClientServiceInitOptions) {
     this.roomId = roomId;
     this.password = password;
     this.client = { ...client, createdAt: Date.now() };
-
+    this.websocketUrl =
+      websocketUrl ?? import.meta.env.VITE_WEBSOCKET_URL;
     window.addEventListener(
       "beforeunload",
       () => {
@@ -115,9 +118,7 @@ export class WebSocketClientService
   }
 
   async initialize(resume?: boolean) {
-    const wsUrl = new URL(
-      import.meta.env.VITE_WEBSOCKET_URL,
-    );
+    const wsUrl = new URL(this.websocketUrl);
 
     wsUrl.searchParams.append("room", this.roomId);
     if (this.password) {

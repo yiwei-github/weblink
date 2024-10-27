@@ -39,17 +39,10 @@
         "title": "TURN Servers",
         "description": "Change the TURN servers of the app, if you want to use this app in a NAT environment, you may need to set up TURN servers",
         "check_availability": "Check Availability"
-      }
-    },
-    "stream": {
-      "title": "Video Call Settings",
-      "video_max_bitrate": {
-        "title": "Video Max Bitrate",
-        "description": "Change the video max bitrate of the stream"
       },
-      "audio_max_bitrate": {
-        "title": "Audio Max Bitrate",
-        "description": "Change the audio max bitrate of the stream"
+      "websocket_url": {
+        "title": "Websocket URL",
+        "description": "Change the Websocket URL of the app, this option is only available when the backend is WebSocket"
       }
     },
     "sender": {
@@ -127,6 +120,17 @@
       },
       "advanced_receiver": {
         "title": "Advanced File Recevier Settings"
+      },
+      "stream": {
+        "title": "Video Call Settings",
+        "video_max_bitrate": {
+          "title": "Video Max Bitrate",
+          "description": "Change the video max bitrate of the stream"
+        },
+        "audio_max_bitrate": {
+          "title": "Audio Max Bitrate",
+          "description": "Change the audio max bitrate of the stream"
+        }
       }
     }
   },
@@ -243,6 +247,8 @@
     },
     "action": {
       "copy": "Copy",
+      "copy_link": "Copy Link",
+      "copy_file_name": "Copy File Name",
       "copy_image": "Copy Image",
       "paste": "Paste",
       "delete": "Delete",
@@ -259,7 +265,8 @@
       "asc": "Asc",
       "desc": "Desc",
       "hide": "Hide",
-      "set_as_background": "Set as Background"
+      "set_as_background": "Set as Background",
+      "test": "Test"
     },
     "notification": {
       "copy_success": "Copy success",
@@ -272,7 +279,7 @@
       "title": "About Weblink",
       "description1": "Weblink is a WebRTC-based file transfer tool that helps you transfer files quickly and securely.",
       "description2": "This project provides end-to-end encryption, serverless architecture, and various advanced features to ensure your data security and privacy.",
-      "features": "Key features include real-time text chat, file transfer, video calls, and multi-party communication.",
+      "features": "Key features include real-time text chat, file transfer, file cache, video calls.",
       "disclaimer": "Disclaimer: This application is for learning and research purposes only. The server does not store any user data, and users should bear the risks of using it at their own risk, and the developers are not responsible for any data loss or privacy breaches.",
       "star_repo": "If you like this project, please give me a ⭐ on GitHub!",
       "version": "Version",

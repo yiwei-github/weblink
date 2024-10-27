@@ -20,7 +20,10 @@ import { clientProfile } from "./store";
 import { cacheManager } from "../services/cache-serivce";
 import { transferManager } from "../services/transfer-service";
 import { getRangesLength } from "../utils/range";
-import { ClientService } from "./services/type";
+import {
+  ClientService,
+  ClientServiceInitOptions,
+} from "./services/type";
 
 import {
   CheckMessage,
@@ -40,12 +43,17 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getServiceConstructor() {
+function getClientService(
+  options: ClientServiceInitOptions,
+): ClientService {
   switch (import.meta.env.VITE_BACKEND) {
     case "FIREBASE":
-      return FirebaseClientService;
+      return new FirebaseClientService(options);
     case "WEBSOCKET":
-      return WebSocketClientService;
+      options.websocketUrl =
+        appOptions.websocketUrl ??
+        import.meta.env.VITE_WEBSOCKET_URL;
+      return new WebSocketClientService(options);
     default:
       throw Error("invalid backend type");
   }
@@ -269,9 +277,8 @@ export const WebRTCProvider: Component<
     if (sessionService.clientService) {
       return;
     }
-    const ClientServiceConstructor =
-      getServiceConstructor();
-    const cs = new ClientServiceConstructor({
+
+    const cs = getClientService({
       roomId: clientProfile.roomId,
       password: clientProfile.password,
       client: {
@@ -279,7 +286,7 @@ export const WebRTCProvider: Component<
         name: clientProfile.name,
         avatar: clientProfile.avatar,
       },
-    }) as ClientService;
+    });
 
     sessionService.setClientService(cs);
 

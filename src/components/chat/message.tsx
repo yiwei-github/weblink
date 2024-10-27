@@ -446,7 +446,7 @@ export const MessageContent: Component<MessageCardProps> = (
           }}
         >
           <IconContentCopy class="size-4" />
-          {t("common.action.copy")}
+          {t("common.action.copy_file_name")}
         </ContextMenuItem>
         <Show
           when={(
@@ -719,8 +719,6 @@ export const ChatBar: Component<
             if (!items) return;
 
             for (let i = 0; i < items.length; i++) {
-              console.log(items[i].kind);
-
               if (items[i].kind === "file") {
                 ev.preventDefault();
 

@@ -89,12 +89,12 @@ export class IDBChunkCache implements ChunkCache {
       return;
     }
     this.db = await this.initDB();
-    const done = await this.isDone();
-    this.isEmpty();
     const info = await this.getInfo();
     if (info) {
       this.dispatchEvent("update", info);
     }
+    await this.isEmpty();
+    const done = await this.isDone();
 
     if (done) {
       if (info?.file) {
@@ -249,7 +249,7 @@ export class IDBChunkCache implements ChunkCache {
       );
 
       console.log(
-        `check done total:${total} count:${count}`,
+        `check file ${info.fileName} done:${done} total:${total} count:${count}`,
       );
 
       if (total === count) {

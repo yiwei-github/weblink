@@ -3,7 +3,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  onMount,
   Show,
 } from "solid-js";
 
@@ -418,6 +417,7 @@ export default function Settings() {
                 return (
                   <div class="self-end">
                     <Button
+                      variant="outline"
                       disabled={disabled()}
                       onClick={async () => {
                         setDisabled(true);
@@ -462,7 +462,11 @@ export default function Settings() {
                           );
                         }
 
-                        await Promise.all(promises);
+                        await Promise.all(promises).finally(
+                          () => {
+                            setDisabled(false);
+                          },
+                        );
 
                         const resultMessage = results
                           .map(
@@ -472,7 +476,6 @@ export default function Settings() {
                           .join("\n");
 
                         toast.info(resultMessage);
-                        setDisabled(false);
                       }}
                     >
                       {t(
@@ -485,77 +488,98 @@ export default function Settings() {
             </Show>
           </label>
 
-          <h3 id="stream" class="h3">
-            {t("setting.stream.title")}
-          </h3>
-          <label class="flex flex-col gap-2">
-            <Slider
-              minValue={512 * 1024}
-              maxValue={200 * 1024 * 1024}
-              step={512 * 1024}
-              defaultValue={[appOptions.videoMaxBitrate]}
-              getValueLabel={({ values }) =>
-                `${formatBitSize(values[0], 0)}ps`
-              }
-              class="gap-2"
-              onChange={(value) => {
-                setAppOptions("videoMaxBitrate", value[0]);
-              }}
-            >
-              <div class="flex w-full justify-between">
-                <SliderLabel>
-                  {t(
-                    "setting.stream.video_max_bitrate.title",
-                  )}
-                </SliderLabel>
-                <SliderValueLabel />
-              </div>
-              <SliderTrack>
-                <SliderFill />
-                <SliderThumb />
-                <SliderThumb />
-              </SliderTrack>
-            </Slider>
-            <p class="muted">
-              {t(
-                "setting.stream.video_max_bitrate.description",
-              )}
-            </p>
-          </label>
-          <label class="flex flex-col gap-2">
-            <Slider
-              minValue={1024}
-              maxValue={512 * 1024}
-              step={1024}
-              defaultValue={[appOptions.audioMaxBitrate]}
-              getValueLabel={({ values }) =>
-                `${formatBitSize(values[0], 0)}ps`
-              }
-              class="gap-2"
-              onChange={(value) => {
-                setAppOptions("audioMaxBitrate", value[0]);
-              }}
-            >
-              <div class="flex w-full justify-between">
-                <SliderLabel>
-                  {t(
-                    "setting.stream.audio_max_bitrate.title",
-                  )}
-                </SliderLabel>
-                <SliderValueLabel />
-              </div>
-              <SliderTrack>
-                <SliderFill />
-                <SliderThumb />
-                <SliderThumb />
-              </SliderTrack>
-            </Slider>
-            <p class="muted">
-              {t(
-                "setting.stream.audio_max_bitrate.description",
-              )}
-            </p>
-          </label>
+          <Show
+            when={
+              import.meta.env.VITE_BACKEND === "WEBSOCKET"
+            }
+          >
+            <label class="flex flex-col gap-2">
+              <Label>
+                {t(
+                  "setting.connection.websocket_url.title",
+                )}
+              </Label>
+              <Input
+                value={appOptions.websocketUrl ?? ""}
+                onInput={(ev) => {
+                  setAppOptions(
+                    "websocketUrl",
+                    ev.currentTarget.value,
+                  );
+                }}
+              />
+              <p class="muted">
+                {t(
+                  "setting.connection.websocket_url.description",
+                )}
+              </p>
+
+              <Show
+                when={
+                  appOptions.websocketUrl !==
+                  import.meta.env.VITE_WEBSOCKET_URL
+                }
+              >
+                {(_) => {
+                  const [disabled, setDisabled] =
+                    createSignal(false);
+                  return (
+                    <div class="flex gap-2 self-end">
+                      <Button
+                        variant="destructive"
+                        disabled={disabled()}
+                        onClick={() => {
+                          setAppOptions(
+                            "websocketUrl",
+                            import.meta.env
+                              .VITE_WEBSOCKET_URL,
+                          );
+                        }}
+                      >
+                        {t("common.action.reset")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={disabled()}
+                        onClick={async () => {
+                          setDisabled(true);
+                          // change ws:// or wss:// to http:// or https://
+                          let message = "";
+                          try {
+                            const ws = new WebSocket(
+                              appOptions.websocketUrl!,
+                            );
+                            message = await new Promise(
+                              (resolve, reject) => {
+                                ws.onopen = () =>
+                                  resolve("success");
+                                ws.onerror = () =>
+                                  reject(
+                                    new Error("failed"),
+                                  );
+                              },
+                            );
+                            ws.close();
+                          } catch (error) {
+                            if (error instanceof Error) {
+                              message = error.message;
+                            } else {
+                              message = "unknown error";
+                            }
+                          } finally {
+                            setDisabled(false);
+                          }
+                          toast.info(message);
+                        }}
+                      >
+                        {t("common.action.test")}
+                      </Button>
+                    </div>
+                  );
+                }}
+              </Show>
+            </label>
+          </Show>
 
           <h3 id="sender" class="h3">
             {t("setting.sender.title")}
@@ -859,6 +883,89 @@ export default function Settings() {
                 <p class="muted">
                   {t(
                     "setting.receiver.max_cached_chunks.description",
+                  )}
+                </p>
+              </label>
+              <h4 id="stream" class="h4">
+                {t(
+                  "setting.advanced_settings.stream.title",
+                )}
+              </h4>
+              <label class="flex flex-col gap-2">
+                <Slider
+                  minValue={512 * 1024}
+                  maxValue={200 * 1024 * 1024}
+                  step={512 * 1024}
+                  defaultValue={[
+                    appOptions.videoMaxBitrate,
+                  ]}
+                  getValueLabel={({ values }) =>
+                    `${formatBitSize(values[0], 0)}ps`
+                  }
+                  class="gap-2"
+                  onChange={(value) => {
+                    setAppOptions(
+                      "videoMaxBitrate",
+                      value[0],
+                    );
+                  }}
+                >
+                  <div class="flex w-full justify-between">
+                    <SliderLabel>
+                      {t(
+                        "setting.advanced_settings.stream.video_max_bitrate.title",
+                      )}
+                    </SliderLabel>
+                    <SliderValueLabel />
+                  </div>
+                  <SliderTrack>
+                    <SliderFill />
+                    <SliderThumb />
+                    <SliderThumb />
+                  </SliderTrack>
+                </Slider>
+                <p class="muted">
+                  {t(
+                    "setting.advanced_settings.stream.video_max_bitrate.description",
+                  )}
+                </p>
+              </label>
+              <label class="flex flex-col gap-2">
+                <Slider
+                  minValue={1024}
+                  maxValue={512 * 1024}
+                  step={1024}
+                  defaultValue={[
+                    appOptions.audioMaxBitrate,
+                  ]}
+                  getValueLabel={({ values }) =>
+                    `${formatBitSize(values[0], 0)}ps`
+                  }
+                  class="gap-2"
+                  onChange={(value) => {
+                    setAppOptions(
+                      "audioMaxBitrate",
+                      value[0],
+                    );
+                  }}
+                >
+                  <div class="flex w-full justify-between">
+                    <SliderLabel>
+                      {t(
+                        "setting.advanced_settings.stream.audio_max_bitrate.title",
+                      )}
+                    </SliderLabel>
+                    <SliderValueLabel />
+                  </div>
+                  <SliderTrack>
+                    <SliderFill />
+                    <SliderThumb />
+                    <SliderThumb />
+                  </SliderTrack>
+                </Slider>
+                <p class="muted">
+                  {t(
+                    "setting.advanced_settings.stream.audio_max_bitrate.description",
                   )}
                 </p>
               </label>

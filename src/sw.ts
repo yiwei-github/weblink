@@ -17,7 +17,7 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  // 删除旧的 i18n 缓存
+  // delete old i18n cache
   event.waitUntil(caches.delete("i18n-cache"));
   if (
     "Notification" in self &&

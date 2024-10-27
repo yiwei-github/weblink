@@ -352,6 +352,10 @@ export default function File() {
       : [],
   );
 
+  // createEffect(() => {
+  //   console.debug("get file data", data());
+  // });
+
   const table: SolidTable<FileMetaData> = createSolidTable({
     get data() {
       return data();
@@ -438,10 +442,7 @@ export default function File() {
             </Progress>
           )}
         </Show>
-        <div
-          class="sticky top-12 z-10 flex gap-2 bg-background/50 py-2
-            backdrop-blur"
-        >
+        <div class="sticky top-12 z-10 flex gap-2 py-2 backdrop-blur">
           <Show
             when={Object.keys(rowSelection()).length !== 0}
           >
@@ -508,8 +509,8 @@ export default function File() {
             tabIndex="0"
             class={cn(
               inputClass,
-              `flex w-full max-w-md items-center gap-2 px-2
-              focus-within:ring-1 focus-within:ring-ring`,
+              `flex w-full max-w-md items-center gap-2 bg-background/80
+              px-2 focus-within:ring-1 focus-within:ring-ring`,
             )}
           >
             <IconSearch700 class="size-5 text-muted-foreground" />

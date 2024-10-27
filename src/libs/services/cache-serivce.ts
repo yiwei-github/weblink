@@ -45,7 +45,6 @@ class FileCacheFactory {
     >({});
     this.caches = caches;
     this.setCaches = setCaches;
-    this.update();
     const [status, setStatus] = createSignal<
       "ready" | "loading"
     >("loading");
@@ -56,6 +55,7 @@ class FileCacheFactory {
     >({});
     this.cacheInfo = cacheInfo;
     this.setCacheInfo = setCacheInfo;
+    this.update();
   }
 
   addEventListener<K extends keyof EventMap>(
@@ -101,11 +101,15 @@ class FileCacheFactory {
         ),
       );
 
-    Promise.all(
+    await Promise.all(
       fileDBs.map((id) => this.createCache(id)),
-    ).then(() => {
-      this.setStatus("ready");
-    });
+    )
+      .catch((e) => {
+        console.error(e);
+      })
+      .finally(() => {
+        this.setStatus("ready");
+      });
   }
 
   getCache(id: FileID): ChunkCache | null {
@@ -150,7 +154,6 @@ class FileCacheFactory {
       }
     });
     await cache.initialize();
-    // const info = (await cache.getInfo()) ?? undefined;
     this.setCaches(id, cache);
     return cache;
   }
