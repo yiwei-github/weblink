@@ -419,7 +419,7 @@ export default function Settings() {
                   <div class="self-end">
                     <Button
                       disabled={disabled()}
-                      onClick={async (ev) => {
+                      onClick={async () => {
                         setDisabled(true);
                         const results: {
                           server: string;

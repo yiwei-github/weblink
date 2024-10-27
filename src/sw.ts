@@ -15,9 +15,10 @@ declare let self: ServiceWorkerGlobalScope;
 
 precacheAndRoute(self.__WB_MANIFEST);
 
-self.addEventListener("install", () => {
+self.addEventListener("install", (event) => {
   self.skipWaiting();
-
+  // 删除旧的 i18n 缓存
+  event.waitUntil(caches.delete("i18n-cache"));
   if (
     "Notification" in self &&
     Notification.permission === "granted"
