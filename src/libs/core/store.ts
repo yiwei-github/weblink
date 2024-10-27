@@ -5,13 +5,45 @@ import { Client } from "./type";
 import { v4 } from "uuid";
 import { SignalingService } from "./services/type";
 import { generateHMAC } from "./utils/hmac";
-import { appOptions } from "@/options";
+import { appOptions, TurnServerOptions } from "@/options";
 
 export interface ClientProfile extends Client {
   roomId: string;
   password: string | null;
   autoJoin: boolean;
   firstTime: boolean;
+}
+
+export async function parseTurnServer(
+  turn: TurnServerOptions,
+): Promise<RTCIceServer | null> {
+  const { authMethod, username, password, url } = turn;
+  if (url.trim().length === 0) return null;
+  if (authMethod === "hmac") {
+    const timestamp =
+      Math.floor(Date.now() / 1000) + 24 * 3600;
+    const hmacUsername = `${timestamp}`;
+    const credential = await generateHMAC(
+      password,
+      hmacUsername,
+    );
+    return {
+      urls: url,
+      username: hmacUsername,
+      credential: credential,
+    } satisfies RTCIceServer;
+  } else if (authMethod === "longterm") {
+    return {
+      urls: turn.url,
+      username: username,
+      credential: password,
+    } satisfies RTCIceServer;
+  } else {
+    console.warn(
+      `failed to add server ${url}, invalid method ${authMethod}`,
+    );
+    return null;
+  }
 }
 
 export async function getConfiguration() {
@@ -24,32 +56,8 @@ export async function getConfiguration() {
   }
   if (appOptions.servers.turns)
     for (const turn of appOptions.servers.turns) {
-      const { authMethod, username, password, url } = turn;
-      if (url.trim().length === 0) continue;
-      if (authMethod === "hmac") {
-        const timestamp =
-          Math.floor(Date.now() / 1000) + 24 * 3600;
-        const hmacUsername = `${timestamp}`;
-        const credential = await generateHMAC(
-          password,
-          hmacUsername,
-        );
-        servers.push({
-          urls: url,
-          username: hmacUsername,
-          credential: credential,
-        });
-      } else if (authMethod === "longterm") {
-        servers.push({
-          urls: turn.url,
-          username: username,
-          credential: password,
-        });
-      } else {
-        console.warn(
-          `failed to add server ${url}, invalid method ${authMethod}`,
-        );
-      }
+      const server = await parseTurnServer(turn);
+      if (server) servers.push(server);
     }
 
   return {

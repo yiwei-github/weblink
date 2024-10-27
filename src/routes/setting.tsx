@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/switch";
 import {
   clientProfile,
+  parseTurnServer,
   setClientProfile,
 } from "@/libs/core/store";
 import {
@@ -82,6 +83,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ComponentProps } from "solid-js";
+import { checkTurnServerAvailability } from "@/libs/core/utils/turn";
 type MediaDeviceInfoType = Omit<MediaDeviceInfo, "toJSON">;
 
 export const [devices, setDevices] = makePersisted(
@@ -100,7 +102,6 @@ export const [devices, setDevices] = makePersisted(
   },
 );
 
-textareaAutoResize;
 function parseTurnServers(
   input: string,
 ): TurnServerOptions[] {
@@ -131,6 +132,16 @@ function parseTurnServers(
     } satisfies TurnServerOptions;
   });
   return turnServers;
+}
+
+function stringifyTurnServers(
+  turnServers: TurnServerOptions[],
+): string {
+  return turnServers
+    .map((turn) => {
+      return `${turn.url}|${turn.username}|${turn.password}|${turn.authMethod}`;
+    })
+    .join("\n");
 }
 
 export default function Settings() {
@@ -380,11 +391,9 @@ export default function Settings() {
               placeholder={
                 "turn:turn1.example.com:3478|user1|pass1|longterm\nturns:turn2.example.com:5349|user2|pass2|hmac"
               }
-              value={appOptions.servers.turns
-                ?.map((trun) => {
-                  return `${trun.url}|${trun.username}|${trun.password}|${trun.authMethod}`;
-                })
-                .join("\n")}
+              value={stringifyTurnServers(
+                appOptions.servers.turns ?? [],
+              )}
               onInput={(ev) =>
                 setAppOptions(
                   "servers",
@@ -402,6 +411,78 @@ export default function Settings() {
                 "setting.connection.turn_servers.description",
               )}
             </p>
+            <Show when={appOptions.servers.turns}>
+              {(turns) => {
+                const [disabled, setDisabled] =
+                  createSignal(false);
+                return (
+                  <div class="self-end">
+                    <Button
+                      disabled={disabled()}
+                      onClick={async (ev) => {
+                        setDisabled(true);
+                        const results: {
+                          server: string;
+                          isAvailable: string;
+                        }[] = [];
+
+                        const promises: Promise<void>[] =
+                          [];
+
+                        for (const turn of turns()) {
+                          const server =
+                            await parseTurnServer(turn);
+                          if (!server) {
+                            results.push({
+                              server: turn.url,
+                              isAvailable:
+                                "invalid turn server",
+                            });
+                            continue;
+                          }
+                          promises.push(
+                            checkTurnServerAvailability(
+                              server,
+                            )
+                              .then((isAvailable) => {
+                                results.push({
+                                  server: turn.url,
+                                  isAvailable: isAvailable
+                                    ? "available"
+                                    : "unavailable",
+                                });
+                              })
+                              .catch((error) => {
+                                results.push({
+                                  server: turn.url,
+                                  isAvailable:
+                                    error.message,
+                                });
+                              }),
+                          );
+                        }
+
+                        await Promise.all(promises);
+
+                        const resultMessage = results
+                          .map(
+                            (result) =>
+                              `${result.server}: ${result.isAvailable}`,
+                          )
+                          .join("\n");
+
+                        toast.info(resultMessage);
+                        setDisabled(false);
+                      }}
+                    >
+                      {t(
+                        "setting.connection.turn_servers.check_availability",
+                      )}
+                    </Button>
+                  </div>
+                );
+              }}
+            </Show>
           </label>
 
           <h3 id="stream" class="h3">

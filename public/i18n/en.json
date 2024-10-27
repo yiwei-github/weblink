@@ -37,7 +37,8 @@
       },
       "turn_servers": {
         "title": "TURN Servers",
-        "description": "Change the TURN servers of the app, if you want to use this app in a NAT environment, you may need to set up TURN servers"
+        "description": "Change the TURN servers of the app, if you want to use this app in a NAT environment, you may need to set up TURN servers",
+        "check_availability": "Check Availability"
       }
     },
     "stream": {
