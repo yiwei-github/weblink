@@ -18,10 +18,12 @@ import {
   ClientServiceEventMap,
   ClientServiceInitOptions,
   SignalingService,
+  TransferClient,
   Unsubscribe,
 } from "../type";
-import { Client, TransferClient } from "../../type";
+import { Client } from "../../type";
 import { FirebaseSignalingService } from "../signaling/firebase-signaling-service";
+import { getAuth, signInAnonymously } from "firebase/auth";
 import {
   comparePasswordHash,
   hashPassword,
@@ -48,6 +50,7 @@ export class FirebaseClientService
   private client: TransferClient;
   private clientRef: DatabaseReference | null = null;
   private password: string | null = null;
+
   private singlingServices: Map<
     string,
     FirebaseSignalingService
@@ -107,6 +110,8 @@ export class FirebaseClientService
   }
 
   private async setupRoom() {
+    await signInAnonymously(getAuth(app));
+
     const roomSnapshot = await get(this.roomRef);
     const roomData = roomSnapshot.val();
     let passwordHash = null;

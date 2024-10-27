@@ -1,9 +1,12 @@
 import {
+  equalTo,
   get,
   getDatabase,
   onChildAdded,
   onDisconnect,
+  orderByChild,
   push,
+  query,
   ref,
   remove,
 } from "firebase/database";
@@ -22,9 +25,7 @@ import {
   decryptData,
   encryptData,
 } from "../../utils/encrypt";
-import {
-  EventHandler,
-} from "@/libs/utils/event-emitter";
+import { EventHandler } from "@/libs/utils/event-emitter";
 
 export class FirebaseSignalingService
   implements SignalingService
@@ -140,13 +141,15 @@ export class FirebaseSignalingService
     callback: (signal: ClientSignal) => void,
   ) {
     return onChildAdded(
-      this.signalsRef,
+      query(
+        this.signalsRef,
+        orderByChild("clientId"),
+        equalTo(this._targetClientId),
+      ),
       async (snapshot) => {
         const message = snapshot.val() as ClientSignal;
         if (!message) return;
         if (message.sessionId === this._sessionId) return;
-        if (message.clientId !== this._targetClientId)
-          return;
         if (
           message.targetClientId &&
           message.targetClientId !== this._clientId

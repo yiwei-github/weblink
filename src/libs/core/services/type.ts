@@ -2,7 +2,6 @@ import {
   Client,
   ClientID,
   SessionID,
-  TransferClient,
 } from "@/libs/core/type";
 import { UpdateClientOptions } from "./client/firebase-client-service";
 import { EventHandler } from "@/libs/utils/event-emitter";
@@ -62,7 +61,6 @@ export interface SignalingService {
     options?: boolean | AddEventListenerOptions,
   ): void;
 
-  
   removeEventListener<
     K extends keyof SignalingServiceEventMap,
   >(
@@ -98,3 +96,5 @@ export interface ClientServiceInitOptions {
   password: string | null;
   client: Client;
 }
+
+export type TransferClient = Client & { createdAt: number };

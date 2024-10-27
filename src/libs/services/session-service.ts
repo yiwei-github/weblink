@@ -4,13 +4,11 @@ import {
   SetStoreFunction,
 } from "solid-js/store";
 import { PeerSession } from "../core/session";
+import { ClientID, ClientInfo, Client } from "../core/type";
 import {
-  ClientID,
-  ClientInfo,
-  Client,
+  ClientService,
   TransferClient,
-} from "../core/type";
-import { ClientService } from "../core/services/type";
+} from "../core/services/type";
 import { Accessor, createSignal, Setter } from "solid-js";
 
 class SessionService {

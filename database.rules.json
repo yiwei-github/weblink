@@ -1,16 +1,31 @@
 {
   "rules": {
-    ".read": false,
-    ".write": false,
     "rooms": {
       "$roomId": {
-        ".read": true,
+        ".read": "auth != null",
         ".write": "auth != null",
+        "clients": {
+          "$clientKey": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['name', 'createdAt']) && 
+                          newData.child('name').isString() && 
+                          newData.child('createdAt').isNumber()"
+          }
+        },
+        "signals": {
+          "$signalKey": {
+            ".write": "auth != null",
+            ".read": "auth != null"
+          }
+        },
         "passwordHash": {
-          ".read": false,
-          ".write": "auth != null && !data.exists() && newData.isString()"
+          ".write": "auth != null",
+          ".validate": "newData.isString()",
+          ".read": "auth != null"
         }
       }
-    }
+    },
+    ".read": false,
+    ".write": false
   }
 }

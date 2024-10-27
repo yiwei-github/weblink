@@ -6,13 +6,7 @@ import {
   ParentProps,
   useContext,
 } from "solid-js";
-import {
-  Client,
-  ClientID,
-  FileID,
-  RoomStatus,
-  TransferClient,
-} from "./type";
+import { ClientID, FileID, RoomStatus } from "./type";
 import { createStore, reconcile } from "solid-js/store";
 import { FirebaseClientService } from "./services/client/firebase-client-service";
 
@@ -294,196 +288,185 @@ export const WebRTCProvider: Component<
       throw err;
     });
 
-    cs.listenForJoin(
-      async (targetClient: TransferClient) => {
-        console.log(`new client join in `, targetClient);
+    cs.listenForJoin(async (targetClient) => {
+      console.log(`new client join in `, targetClient);
 
-        const session =
-          sessionService.addClient(targetClient);
-        if (!session) {
-          console.error(`no client service setted`);
-          return;
+      const session =
+        sessionService.addClient(targetClient);
+      if (!session) {
+        console.error(`no client service setted`);
+        return;
+      }
+      // const updateStats = async (pc: RTCPeerConnection) => {
+      //   const reports: any[] = [];
+      //   const stats = await pc.getStats();
+
+      //   let candidateType: string | undefined;
+      //   stats.forEach((report) => {
+      //     reports.push(report);
+      //     if (report.type === "transport") {
+      //       let activeCandidatePair = stats.get(
+      //         report.selectedCandidatePairId,
+      //       ) as RTCIceCandidatePairStats;
+      //       if (!activeCandidatePair) return;
+      //       let remoteCandidate = stats.get(
+      //         activeCandidatePair.remoteCandidateId,
+      //       );
+      //       let localCandidate = stats.get(
+      //         activeCandidatePair.localCandidateId,
+      //       );
+      //       if (
+      //         localCandidate?.candidateType ||
+      //         remoteCandidate?.candidateType
+      //       ) {
+      //         candidateType =
+      //           localCandidate?.candidateType ??
+      //           remoteCandidate?.candidateType;
+      //       }
+      //     }
+      //   });
+      //   if (clientSessionInfo[targetClient.clientId]) {
+      //     setClientSessionInfo(
+      //       targetClient.clientId,
+      //       "statsReports",
+      //       reports,
+      //     );
+      //     setClientSessionInfo(
+      //       targetClient.clientId,
+      //       "candidateType",
+      //       candidateType,
+      //     );
+      //   }
+      // };
+
+      // setClientSessionInfo(targetClient.clientId, {
+      //   ...targetClient,
+      //   onlineStatus: "offline",
+      // } satisfies ClientInfo);
+
+      // const polite =
+      //   cs.info.createAt < targetClient.createAt;
+      // const session = new PeerSession(
+      //   cs.getSender(targetClient.clientId),
+      //   { polite },
+      // );
+
+      const localStream = props.localStream;
+
+      session.addEventListener("message", async (ev) => {
+        const message = ev.detail;
+        handleMessage(session, message);
+      });
+
+      session.addEventListener("channel", (ev) => {
+        const channel = ev.detail;
+
+        if (
+          channel.label.startsWith(TRANSFER_CHANNEL_PREFIX)
+        ) {
+          console.log(`datachannel event`, channel);
+
+          const fileIdWithChannelId = channel.label.replace(
+            TRANSFER_CHANNEL_PREFIX,
+            "",
+          );
+
+          const fileId = Object.keys(
+            transferManager.transferers,
+          ).find((fileId) =>
+            fileIdWithChannelId.startsWith(fileId),
+          );
+
+          if (!fileId) {
+            console.warn(
+              `can not find receiver for file`,
+              fileIdWithChannelId,
+            );
+
+            return;
+          }
+          console.log(`receive channel for file ${fileId}`);
+
+          transferManager.addChannel(fileId, channel);
         }
-        // const updateStats = async (pc: RTCPeerConnection) => {
-        //   const reports: any[] = [];
-        //   const stats = await pc.getStats();
+      });
 
-        //   let candidateType: string | undefined;
-        //   stats.forEach((report) => {
-        //     reports.push(report);
-        //     if (report.type === "transport") {
-        //       let activeCandidatePair = stats.get(
-        //         report.selectedCandidatePairId,
-        //       ) as RTCIceCandidatePairStats;
-        //       if (!activeCandidatePair) return;
-        //       let remoteCandidate = stats.get(
-        //         activeCandidatePair.remoteCandidateId,
-        //       );
-        //       let localCandidate = stats.get(
-        //         activeCandidatePair.localCandidateId,
-        //       );
-        //       if (
-        //         localCandidate?.candidateType ||
-        //         remoteCandidate?.candidateType
-        //       ) {
-        //         candidateType =
-        //           localCandidate?.candidateType ??
-        //           remoteCandidate?.candidateType;
-        //       }
-        //     }
-        //   });
-        //   if (clientSessionInfo[targetClient.clientId]) {
-        //     setClientSessionInfo(
-        //       targetClient.clientId,
-        //       "statsReports",
-        //       reports,
-        //     );
-        //     setClientSessionInfo(
-        //       targetClient.clientId,
-        //       "candidateType",
-        //       candidateType,
-        //     );
-        //   }
-        // };
+      session.addEventListener("created", () => {
+        const pc = session.peerConnection!;
 
-        // setClientSessionInfo(targetClient.clientId, {
-        //   ...targetClient,
-        //   onlineStatus: "offline",
-        // } satisfies ClientInfo);
+        if (localStream) {
+          const tracks = localStream.getTracks();
 
-        // const polite =
-        //   cs.info.createAt < targetClient.createAt;
-        // const session = new PeerSession(
-        //   cs.getSender(targetClient.clientId),
-        //   { polite },
-        // );
+          pc.getTransceivers().forEach((transceiver) => {
+            const track = tracks.find(
+              (t) =>
+                t.kind === transceiver.receiver.track.kind,
+            );
+            if (track) {
+              transceiver.direction = "sendrecv";
+              transceiver.sender.replaceTrack(track);
+              transceiver.sender.setStreams(localStream);
+            }
+          });
+        }
+        props.onTrackChanged?.(targetClient.clientId, pc);
 
-        const localStream = props.localStream;
-
-        session.addEventListener("message", async (ev) => {
-          const message = ev.detail;
-          handleMessage(session, message);
-        });
-
-        session.addEventListener("channel", (ev) => {
-          const channel = ev.detail;
-
+        const onTrack = ({
+          track,
+          streams,
+        }: RTCTrackEvent) => {
+          console.log(`on track event:`, streams, track);
+          const stream = streams[0];
+          if (!stream) return;
           if (
-            channel.label.startsWith(
-              TRANSFER_CHANNEL_PREFIX,
-            )
-          ) {
-            console.log(`datachannel event`, channel);
+            remoteStreams[targetClient.clientId] &&
+            remoteStreams[targetClient.clientId].id ===
+              stream.id
+          )
+            return;
 
-            const fileIdWithChannelId =
-              channel.label.replace(
-                TRANSFER_CHANNEL_PREFIX,
-                "",
-              );
-
-            const fileId = Object.keys(
-              transferManager.transferers,
-            ).find((fileId) =>
-              fileIdWithChannelId.startsWith(fileId),
-            );
-
-            if (!fileId) {
-              console.warn(
-                `can not find receiver for file`,
-                fileIdWithChannelId,
-              );
-
-              return;
-            }
+          stream.addEventListener("removetrack", (ev) => {
             console.log(
-              `receive channel for file ${fileId}`,
+              `client ${targetClient.clientId} removetrack`,
+              ev.track.id,
             );
-
-            transferManager.addChannel(fileId, channel);
-          }
-        });
-
-        session.addEventListener("created", () => {
-          const pc = session.peerConnection!;
-
-          if (localStream) {
-            const tracks = localStream.getTracks();
-
-            pc.getTransceivers().forEach((transceiver) => {
-              const track = tracks.find(
-                (t) =>
-                  t.kind ===
-                  transceiver.receiver.track.kind,
+            if (stream.getTracks().length === 0) {
+              setRemoteStreams(
+                targetClient.clientId,
+                undefined!,
               );
-              if (track) {
-                transceiver.direction = "sendrecv";
-                transceiver.sender.replaceTrack(track);
-                transceiver.sender.setStreams(localStream);
-              }
-            });
-          }
+            }
+          });
+
+          console.log(
+            `new remote stream from client ${targetClient.clientId}`,
+            stream.getTracks(),
+          );
+
+          setRemoteStreams(targetClient.clientId, stream);
           props.onTrackChanged?.(targetClient.clientId, pc);
+        };
+        pc.addEventListener("track", onTrack);
+      });
 
-          const onTrack = ({
-            track,
-            streams,
-          }: RTCTrackEvent) => {
-            console.log(`on track event:`, streams, track);
-            const stream = streams[0];
-            if (!stream) return;
-            if (
-              remoteStreams[targetClient.clientId] &&
-              remoteStreams[targetClient.clientId].id ===
-                stream.id
-            )
-              return;
+      await session.listen();
+      messageStores.setClient(targetClient);
 
-            stream.addEventListener("removetrack", (ev) => {
-              console.log(
-                `client ${targetClient.clientId} removetrack`,
-                ev.track.id,
-              );
-              if (stream.getTracks().length === 0) {
-                setRemoteStreams(
-                  targetClient.clientId,
-                  undefined!,
-                );
-              }
-            });
-
-            console.log(
-              `new remote stream from client ${targetClient.clientId}`,
-              stream.getTracks(),
-            );
-
-            setRemoteStreams(targetClient.clientId, stream);
-            props.onTrackChanged?.(
-              targetClient.clientId,
-              pc,
-            );
-          };
-          pc.addEventListener("track", onTrack);
-        });
-
-        await session.listen();
-        messageStores.setClient(targetClient);
-
-        if (!session.polite) {
-          try {
-            await session.connect();
-          } catch (err) {
-            console.error(err);
-            if (
-              Object.values(sessionService.sessions)
-                .length === 0
-            ) {
-              leaveRoom();
-              throw err;
-            }
+      if (!session.polite) {
+        try {
+          await session.connect();
+        } catch (err) {
+          console.error(err);
+          if (
+            Object.values(sessionService.sessions)
+              .length === 0
+          ) {
+            leaveRoom();
+            throw err;
           }
         }
-      },
-    );
+      }
+    });
 
     cs.listenForLeave((client) => {
       console.log(`client ${client.clientId} leave`);

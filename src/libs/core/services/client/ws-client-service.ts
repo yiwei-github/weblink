@@ -2,13 +2,16 @@ import {
   EventHandler,
   MultiEventEmitter,
 } from "@/libs/utils/event-emitter";
-import { ClientID, TransferClient } from "../../type";
 import {
   comparePasswordHash,
   hashPassword,
 } from "../../utils/encrypt";
 import { WebSocketSignalingService } from "../signaling/ws-signaling-service";
-import { ClientServiceEventMap, RawSignal } from "../type";
+import {
+  ClientServiceEventMap,
+  RawSignal,
+  TransferClient,
+} from "../type";
 import {
   ClientService,
   ClientServiceInitOptions,

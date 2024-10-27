@@ -1,3 +1,5 @@
+import { TransferClient } from "./services/type";
+
 export type RoomStatus = {
   roomId: RoomID | null;
   profile: ClientInfo | null;
@@ -14,8 +16,6 @@ export interface Client {
   name: string;
   avatar: string | null;
 }
-
-export type TransferClient = Client & { createdAt: number };
 
 export interface CreateClient extends Client {
   password?: string;
