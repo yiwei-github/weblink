@@ -173,6 +173,10 @@
     },
     "no_stream": "No Stream"
   },
+  "browser_unsupported": {
+    "title": "Sorry, your browser is not supported.",
+    "description": "Please use a modern browser like Chrome, Firefox, Safari, Edge, or Opera."
+  },
   "common": {
     "theme_toggle": {
       "light": "Light Mode",
