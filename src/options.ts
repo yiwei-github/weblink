@@ -37,6 +37,7 @@ export type AppOption = {
   automaticDownload: boolean;
 
   // Sender
+  enableClipboard: boolean;
   automaticCacheDeletion: boolean;
   channelsNumber: number;
   chunkSize: number;
@@ -67,6 +68,7 @@ export const getDefaultAppOptions = () => {
     chunkSize: 1024 * 1024,
     blockSize: 64 * 1024,
     ordered: false,
+    enableClipboard: true,
     automaticCacheDeletion: false,
     bufferedAmountLowThreshold: 512 * 1024,
     maxMomeryCacheSlices: 12,

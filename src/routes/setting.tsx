@@ -587,6 +587,32 @@ export default function Settings() {
           <div class="flex flex-col gap-2">
             <Switch
               class="flex items-center justify-between"
+              checked={appOptions.enableClipboard}
+              onChange={(isChecked) =>
+                setAppOptions(
+                  "enableClipboard",
+                  isChecked,
+                )
+              }
+            >
+              <SwitchLabel>
+                {t(
+                  "setting.sender.enable_clipboard.title",
+                )}
+              </SwitchLabel>
+              <SwitchControl>
+                <SwitchThumb />
+              </SwitchControl>
+            </Switch>
+            <p class="muted">
+              {t(
+                "setting.sender.enable_clipboard.description",
+              )}
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <Switch
+              class="flex items-center justify-between"
               checked={appOptions.automaticCacheDeletion}
               onChange={(isChecked) =>
                 setAppOptions(

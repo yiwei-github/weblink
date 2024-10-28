@@ -34,7 +34,9 @@ import { createElementSize } from "@solid-primitives/resize-observer";
 
 import PhotoSwipeLightbox from "photoswipe/lightbox";
 import {
+  SendClipboardMessage,
   messageStores,
+  SessionMessage,
   StoreMessage,
 } from "@/libs/core/messge";
 import { getInitials } from "@/libs/utils/name";
@@ -64,11 +66,14 @@ import { createComfirmDeleteClientDialog } from "@/components/ui/confirm-delete-
 import { t } from "@/i18n";
 import { ConnectionBadge } from "@/components/chat/clientlist";
 import { toast } from "solid-sonner";
+import { PeerSession } from "@/libs/core/session";
+import { v4 } from "uuid";
+import { appOptions } from "@/options";
 export default function ClientPage(
   props: RouteSectionProps,
 ) {
   const navigate = useNavigate();
-  const { send } = useWebRTC();
+  const { send, roomStatus } = useWebRTC();
   const client = createMemo(() =>
     messageStores.clients.find(
       (client) => client.clientId === props.params.id,
@@ -177,6 +182,43 @@ export default function ClientPage(
 
   const { open, Component } =
     createComfirmDeleteClientDialog();
+  const session = createMemo<PeerSession | undefined>(
+    () =>
+      clientInfo() &&
+      sessionService.sessions[clientInfo()!.clientId],
+  );
+
+  const onClipboard = (ev: ClipboardEvent) => {
+    const s = session();
+    if (!s) return;
+    for (const item of ev.clipboardData?.items ?? []) {
+      if (item.kind === "string") {
+        item.getAsString((data) => {
+          if (data) {
+            s.sendMessage({
+              type: "send-clipboard",
+              id: v4(),
+              createdAt: Date.now(),
+              client: s.clientId,
+              target: s.targetClientId,
+              data,
+            } satisfies SendClipboardMessage);
+          }
+        });
+        break;
+      }
+    }
+  };
+
+  onMount(() => {
+    if (appOptions.enableClipboard) {
+      window.addEventListener("paste", onClipboard);
+
+      onCleanup(() => {
+        window.removeEventListener("paste", onClipboard);
+      });
+    }
+  });
 
   return (
     <div class="flex h-full w-full flex-col">
@@ -269,7 +311,8 @@ export default function ClientPage(
                           if (session) {
                             try {
                               await session.listen();
-                              await session.connect();
+                              if (!session.polite)
+                                await session.connect();
                             } catch (error) {
                               console.error(error);
                               if (error instanceof Error) {

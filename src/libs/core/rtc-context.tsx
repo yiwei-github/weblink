@@ -3,6 +3,7 @@ import {
   createContext,
   createEffect,
   onCleanup,
+  onMount,
   ParentProps,
   useContext,
 } from "solid-js";
@@ -38,6 +39,7 @@ import { WebSocketClientService } from "./services/client/ws-client-service";
 import { appOptions } from "@/options";
 import { aw } from "vitest/dist/chunks/reporters.DAfKSDh5.js";
 import { FileMetaData } from "../cache/chunk-cache";
+import { toast } from "solid-sonner";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -130,6 +132,31 @@ export const WebRTCProvider: Component<
   //   }
   // });
 
+  let clipboardCacheData: string[] = [];
+
+  onMount(() => {
+    const onFocus = () => {
+      if (clipboardCacheData.length === 0) return;
+      const data = clipboardCacheData.join("\n");
+      navigator.clipboard
+        .writeText(data)
+        .then(() => {
+          toast.success(data);
+        })
+        .catch((err) => {
+          toast.error(err.message);
+        })
+        .finally(() => {
+          clipboardCacheData.length = 0;
+        });
+    };
+    window.addEventListener("focus", onFocus);
+
+    onCleanup(() => {
+      window.removeEventListener("focus", onFocus);
+    });
+  });
+
   const [remoteStreams, setRemoteStreams] = createStore<
     Record<string, MediaStream>
   >({});
@@ -158,6 +185,21 @@ export const WebRTCProvider: Component<
       } satisfies CheckMessage;
 
       session.sendMessage(replyMessage);
+    } else if (message.type === "send-clipboard") {
+      window.focus();
+      navigator.clipboard
+        .writeText(message.data)
+        .then(() => {
+          toast.success(message.data);
+        })
+        .catch((err) => {
+          if (err instanceof Error) {
+            console.warn(
+              `can not write ${message.data} to clipboard, ${err.message}`,
+            );
+          }
+          clipboardCacheData.push(message.data);
+        });
     } else if (message.type === "send-file") {
       const cache = await cacheManager.createCache(
         message.fid,
@@ -294,6 +336,8 @@ export const WebRTCProvider: Component<
       sessionService.destoryService();
       throw err;
     });
+
+    setRoomStatus("profile", cs.info);
 
     cs.listenForJoin(async (targetClient) => {
       console.log(`new client join in `, targetClient);

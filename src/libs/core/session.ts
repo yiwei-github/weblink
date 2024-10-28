@@ -327,6 +327,7 @@ export class PeerSession {
               return;
             }
 
+            
             await pc
               .setRemoteDescription(
                 new RTCSessionDescription({

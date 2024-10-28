@@ -63,7 +63,7 @@ export interface FileTransferMessage
 
 export type StoreMessage =
   | TextMessage
-  | FileTransferMessage;
+  | FileTransferMessage
 
 export type SendTextMessage = BaseExchangeMessage & {
   type: "send-text";
@@ -72,7 +72,6 @@ export type SendTextMessage = BaseExchangeMessage & {
 
 export type CheckMessage = BaseExchangeMessage & {
   type: "check-message";
-
   id: MessageID;
 };
 
@@ -97,12 +96,18 @@ export type SendFileMessage = BaseExchangeMessage & {
   chunkSize: number;
 };
 
+export type SendClipboardMessage = BaseExchangeMessage & {
+  type: "send-clipboard";
+  data: string;
+};
+
 export type SessionMessage =
   | SendTextMessage
   | CheckMessage
   | ReadTextMessage
   | RequestFileMessage
-  | SendFileMessage;
+  | SendFileMessage
+  | SendClipboardMessage;
 
 class MessageStores {
   readonly messages: StoreMessage[];

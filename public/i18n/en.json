@@ -47,6 +47,10 @@
     },
     "sender": {
       "title": "File Sender Settings",
+      "enable_clipboard": {
+        "title": "Enable Clipboard",
+        "description": "Enable the clipboard of the sender, when enabled, the sender will automatically send the clipboard content to the receiver when the receiver is ready"
+      },
       "num_channels": {
         "title": "NO. of Channels",
         "description": "The number of channels of the sender, appropriate adjustment may improve the transfer speed"
@@ -158,7 +162,8 @@
       "copy_success": "Link copied"
     },
     "message_editor": {
-      "placeholder": "Ctrl + Enter or Shift + Enter to send the message"
+      "placeholder": "Ctrl + Enter or Shift + Enter to send the message",
+      "paste_tip": "Clipboard paste enabled"
     }
   },
   "video": {

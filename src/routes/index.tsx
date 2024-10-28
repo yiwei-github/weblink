@@ -45,7 +45,7 @@ export interface UserItemProps
 }
 
 export default function Home(props: RouteSectionProps) {
-  const isMobile = createMediaQuery("(max-width: 767px)");
+  const isMobile = createMediaQuery("(max-width: 768px)");
 
   const matches = useCurrentMatches();
   const [size, setSize] = makePersisted(

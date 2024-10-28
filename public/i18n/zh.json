@@ -47,6 +47,10 @@
     },
     "sender": {
       "title": "文件发送设置",
+      "enable_clipboard": {
+        "title": "启用剪贴板",
+        "description": "启用发送端的剪贴板，启用后，发送端会在接收端准备好时自动发送剪贴板内容"
+      },
       "num_channels": {
         "title": "通道数",
         "description": "更改发送端的通道数，适当调整可能可以提高传输速度"
@@ -158,7 +162,8 @@
       "copy_success": "链接已复制"
     },
     "message_editor": {
-      "placeholder": "Ctrl + Enter 或 Shift + Enter 发送消息"
+      "placeholder": "Ctrl + Enter 或 Shift + Enter 发送消息",
+      "paste_tip": "剪贴板粘贴已启用"
     }
   },
   "video": {

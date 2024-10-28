@@ -41,6 +41,7 @@ import "photoswipe/style.css";
 import {
   FileTransferMessage,
   messageStores,
+  SendClipboardMessage,
   SendFileMessage,
   SendTextMessage,
   SessionMessage,
@@ -72,6 +73,8 @@ import { t } from "@/i18n";
 import { createSendItemPreviewDialog } from "../preview-dialog";
 import { toast } from "solid-sonner";
 import { Dynamic } from "solid-js/web";
+import { createMediaQuery } from "@solid-primitives/media";
+import { appOptions } from "@/options";
 export interface MessageCardProps
   extends ComponentProps<"li"> {
   message: StoreMessage;
@@ -566,7 +569,9 @@ export const MessageContent: Component<MessageCardProps> = (
                   size="icon"
                   variant="outline"
                   onClick={() => {
-                    let sessionMessage: SessionMessage;
+                    let sessionMessage:
+                      | SessionMessage
+                      | undefined;
 
                     if (props.message.type === "text") {
                       sessionMessage = {
@@ -577,7 +582,9 @@ export const MessageContent: Component<MessageCardProps> = (
                         data: props.message.data,
                         createdAt: props.message.createdAt,
                       } satisfies SendTextMessage;
-                    } else {
+                    } else if (
+                      props.message.type === "file"
+                    ) {
                       sessionMessage = {
                         id: props.message.id,
                         type: "send-file",
@@ -591,6 +598,7 @@ export const MessageContent: Component<MessageCardProps> = (
                         fileSize: props.message.fileSize,
                       } satisfies SendFileMessage;
                     }
+                    if (!sessionMessage) return;
 
                     messageStores.setMessage(
                       sessionMessage,
@@ -656,7 +664,7 @@ export const ChatBar: Component<
 
   const { open: openPreview, Component: PreviewDialog } =
     createSendItemPreviewDialog();
-
+  const isMobile = createMediaQuery("(max-width: 768px)");
   const onSend = async () => {
     if (text().trim().length === 0) return;
     try {
@@ -714,6 +722,15 @@ export const ChatBar: Component<
           value={text()}
           onInput={(ev) => setText(ev.currentTarget.value)}
           onPaste={(ev) => {
+            if (!isMobile()) {
+              ev.stopPropagation();
+            } else {
+              if (appOptions.enableClipboard) {
+                setTimeout(() => {
+                  setText("");
+                }, 0);
+              }
+            }
             const clipboardData = ev.clipboardData;
             const items = clipboardData?.items;
             if (!items) return;
@@ -751,8 +768,18 @@ export const ChatBar: Component<
           }}
         />
       </form>
-      <div class="flex justify-end gap-1">
-        <Button as="label" variant="ghost" size="icon">
+      <div class="flex gap-1">
+        <Show when={isMobile() && appOptions.enableClipboard}>
+          <p class="text-xs text-muted-foreground">
+            {t("chat.message_editor.paste_tip")}
+          </p>
+        </Show>
+        <Button
+          class="ml-auto"
+          as="label"
+          variant="ghost"
+          size="icon"
+        >
           <IconAttachFile class="size-6" />
           <Input
             multiple
