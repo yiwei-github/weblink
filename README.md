@@ -14,7 +14,7 @@ You can also use [https://webl.ink](https://webl.ink) which deployed on aliyun i
 
 ### Run Locally
 
-```base
+```bash
 git clone https://github.com/99percentpeople/weblink.git
 cd weblink
 pnpm install
@@ -22,12 +22,30 @@ pnpm install
 
 Make sure you configure the Firebase keys in the project (as shown below), then run the following command:
 
-```base
+```bash
 # Development
 pnpm dev
 # Build
 pnpm build
 ```
+
+### Deploy to Docker
+
+You can deploy this project to Docker using `docker-compose.yaml`, and it will automatically build the [weblink-ws-server](https://github.com/99percentpeople/weblink-ws-server) as backend.
+
+Modify the `docker-compose.yaml` file to set the correct environment variables. Then run the following command:
+
+```bash
+docker-compose up -d
+```
+
+To enable SSL you need to provide the SSL certificate `cert.pem` and key `key.pem` files in the `docker/ssl` directory. And run the following command:
+
+```bash
+ENABLE_SSL=true docker-compose up -d
+```
+
+Alternatively, you can also use Dockerfile to deploy this project to Docker.
 
 ### Deploy to Vercel
 
@@ -103,7 +121,7 @@ If you are using P2P connections outside a local area network (in a NAT environm
 
 **TURN Configuration Format:**
 
-```
+```plaintext
 turn:turn1.example.com:3478|user1|pass1|longterm
 turns:turn2.example.com:5349|user2|pass2|hmac
 ```

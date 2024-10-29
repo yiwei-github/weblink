@@ -29,6 +29,24 @@ pnpm dev
 pnpm build
 ```
 
+### 部署到 Docker
+
+你可以使用 `docker-compose.yaml` 将项目部署到 Docker，并且会自动构建 [weblink-ws-server](https://github.com/99percentpeople/weblink-ws-server) 作为后端。
+
+修改 `docker-compose.yaml` 文件以设置正确的环境变量，然后运行以下命令：
+
+```bash
+docker-compose up -d
+```
+
+启用 SSL 时，需要提供 SSL 证书 `cert.pem` 和密钥 `key.pem` 文件在 `docker/ssl` 目录下，然后运行以下命令：
+
+```bash
+ENABLE_SSL=true docker-compose up -d
+```
+
+你也可以使用 Dockerfile 部署到 Docker。
+
 ### 部署到 Vercel
 
 你可以通过以下步骤将项目部署到 Vercel：
@@ -100,7 +118,7 @@ VITE_WEBSOCKET_URL=your-websocket-url
 
 **TURN 配置格式**：
 
-```
+```plaintext
 turn:turn1.example.com:3478|user1|pass1|longterm
 turns:turn2.example.com:5349|user2|pass2|hmac
 ```

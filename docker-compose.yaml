@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  weblink:
+    build:
+      context: .
+      args:
+        # Set your public websocket url here, here is an example
+        VITE_WEBSOCKET_URL: ws://192.168.1.100:8080/ws
+    ports:
+      - "8080:80"
+      - "443:443"
+    environment:
+      - ENABLE_SSL=${ENABLE_SSL:-false}
+    volumes:
+      - ./docker/ssl:/etc/nginx/ssl
+    depends_on:
+      - ws-server
+
+  ws-server:
+    build:
+      args:
+        LOG_LEVEL: info
+      context: https://github.com/99percentpeople/weblink-ws-server.git
+    ports:
+      - "9000:9000"
