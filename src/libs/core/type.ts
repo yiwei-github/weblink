@@ -25,6 +25,7 @@ export interface ClientInfo extends TransferClient {
   statsReports?: any[];
   candidateType?: string;
   onlineStatus: "offline" | "online" | "connecting";
+  clipboard?: string[];
 }
 export type RoomID = string;
 export type ClientID = string;

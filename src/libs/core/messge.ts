@@ -355,7 +355,7 @@ class MessageStores {
     return controller;
   }
 
-  setMessage(
+  handleReceiveMessage(
     sessionMsg: SessionMessage,
   ): SessionMessage | null {
     let index: number = -1;

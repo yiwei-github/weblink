@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2024-10-30
+
+### New Features
+
+- Add clipboard history dialog 添加剪贴板历史对话框
+
 ## [0.3.1] - 2024-10-29
 
 ### Bug Fixes

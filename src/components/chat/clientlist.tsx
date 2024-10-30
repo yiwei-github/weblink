@@ -35,7 +35,7 @@ import {
 } from "../icons";
 
 import { sessionService } from "@/libs/services/session-service";
-import { createComfirmDeleteClientDialog } from "../ui/confirm-delete-dialog";
+import { createComfirmDeleteClientDialog } from "../box/confirm-delete-dialog";
 import { t } from "@/i18n";
 export const getInitials = (name = "") =>
   name

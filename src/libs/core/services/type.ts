@@ -15,30 +15,30 @@ export type ClientServiceEventMap = {
 
 export interface ClientService {
   get info(): TransferClient;
-
+  
   addEventListener<K extends keyof ClientServiceEventMap>(
     event: K,
     callback: EventHandler<ClientServiceEventMap[K]>,
     options?: boolean | AddEventListenerOptions,
   ): void;
   removeEventListener<
-    K extends keyof ClientServiceEventMap,
+  K extends keyof ClientServiceEventMap,
   >(
     event: K,
     callback: EventHandler<ClientServiceEventMap[K]>,
     options?: boolean | AddEventListenerOptions,
   ): void;
-
+  
   getSender: (target: ClientID) => SignalingService;
   removeSender: (target: ClientID) => void;
-
+  
   listenForJoin(
     callback: (client: TransferClient) => void,
   ): void;
   listenForLeave(
     callback: (client: TransferClient) => void,
   ): void;
-
+  
   createClient(): Promise<void>;
   updateClient(options: UpdateClientOptions): Promise<void>;
 

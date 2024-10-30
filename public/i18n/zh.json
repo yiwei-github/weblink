@@ -49,7 +49,8 @@
       "title": "文件发送设置",
       "enable_clipboard": {
         "title": "启用剪贴板",
-        "description": "启用发送端的剪贴板，启用后，发送端会在接收端准备好时自动发送剪贴板内容"
+        "description": "启用发送端的剪贴板传送功能，启用后，可以通过对聊天窗口按 Ctrl + V 发送剪贴板内容，移动端可以通过粘贴到信息输入框发送",
+        "unsupported": "剪贴板功能不受支持，请在安全的上下文中使用"
       },
       "num_channels": {
         "title": "通道数",
@@ -153,7 +154,8 @@
     "menu": {
       "connect": "连接",
       "connection_status": "连接状态",
-      "delete_client": "删除客户端"
+      "delete_client": "删除客户端",
+      "clipboard": "剪贴板"
     },
     "index": {
       "description": "扫描二维码或分享链接以连接到此房间，右键点击复制链接",
@@ -288,6 +290,9 @@
       "hide": "隐藏",
       "set_as_background": "设置为背景",
       "test": "测试"
+    },
+    "clipboard_history": {
+      "title": "剪贴板历史"
     },
     "about_dialog": {
       "title": "关于 Weblink",

@@ -68,7 +68,7 @@ export const getDefaultAppOptions = () => {
     chunkSize: 1024 * 1024,
     blockSize: 64 * 1024,
     ordered: false,
-    enableClipboard: true,
+    enableClipboard: navigator.clipboard !== undefined,
     automaticCacheDeletion: false,
     bufferedAmountLowThreshold: 512 * 1024,
     maxMomeryCacheSlices: 12,

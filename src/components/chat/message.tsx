@@ -600,7 +600,7 @@ export const MessageContent: Component<MessageCardProps> = (
                     }
                     if (!sessionMessage) return;
 
-                    messageStores.setMessage(
+                    messageStores.handleReceiveMessage(
                       sessionMessage,
                     );
                     session().sendMessage(sessionMessage);

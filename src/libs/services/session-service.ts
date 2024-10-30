@@ -1,5 +1,6 @@
 import {
   createStore,
+  produce,
   reconcile,
   SetStoreFunction,
 } from "solid-js/store";
@@ -10,6 +11,7 @@ import {
   TransferClient,
 } from "../core/services/type";
 import { Accessor, createSignal, Setter } from "solid-js";
+import { SessionMessage } from "../core/messge";
 
 class SessionService {
   readonly sessions: Record<ClientID, PeerSession>;
@@ -51,6 +53,20 @@ class SessionService {
       >("disconnected");
     this.clientServiceStatus = clientServiceStatus;
     this.setClientServiceStatus = setClientServiceStatus;
+  }
+
+  handleReceiveMessage(message: SessionMessage) {
+    if (message.type === "send-clipboard") {
+      this.setClientInfo(
+        message.client,
+        produce((state) => {
+          state.clipboard = [
+            ...(state.clipboard ?? []),
+            message.data,
+          ];
+        }),
+      );
+    }
   }
 
   setClientService(cs: ClientService) {

@@ -49,7 +49,8 @@
       "title": "File Sender Settings",
       "enable_clipboard": {
         "title": "Enable Clipboard",
-        "description": "Enable the clipboard of the sender, when enabled, the sender will automatically send the clipboard content to the receiver when the receiver is ready"
+        "description": "Enable the clipboard sending function of the sender, after enabling, you can send the clipboard content by pressing Ctrl + V on the chat window, and on mobile devices, you can send it by pasting into the information input box",
+        "unsupported": "Clipboard is not supported, please use in a secure context"
       },
       "num_channels": {
         "title": "NO. of Channels",
@@ -153,7 +154,8 @@
     "menu": {
       "connect": "Connect",
       "connection_status": "Connection Status",
-      "delete_client": "Delete Client"
+      "delete_client": "Delete Client",
+      "clipboard": "Clipboard"
     },
     "index": {
       "description": "Scan the QR code or share the link to connect to this room, right-click to copy the link",

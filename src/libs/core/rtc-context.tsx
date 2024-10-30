@@ -169,11 +169,12 @@ export const WebRTCProvider: Component<
 
   // targetClientId, connection
 
-  async function handleMessage(
+  async function handleReceiveMessage(
     session: PeerSession,
     message: SessionMessage,
   ) {
-    messageStores.setMessage(message);
+    messageStores.handleReceiveMessage(message);
+    sessionService.handleReceiveMessage(message);
 
     if (message.type === "send-text") {
       const replyMessage = {
@@ -187,19 +188,21 @@ export const WebRTCProvider: Component<
       session.sendMessage(replyMessage);
     } else if (message.type === "send-clipboard") {
       window.focus();
-      navigator.clipboard
-        .writeText(message.data)
-        .then(() => {
-          toast.success(message.data);
-        })
-        .catch((err) => {
-          if (err instanceof Error) {
-            console.warn(
-              `can not write ${message.data} to clipboard, ${err.message}`,
-            );
-          }
-          clipboardCacheData.push(message.data);
-        });
+      if (navigator.clipboard) {
+        navigator.clipboard
+          .writeText(message.data)
+          .then(() => {
+            toast.success(message.data);
+          })
+          .catch((err) => {
+            clipboardCacheData.push(message.data);
+            if (err instanceof Error) {
+              console.warn(
+                `can not write ${message.data} to clipboard, ${err.message}`,
+              );
+            }
+          });
+      }
     } else if (message.type === "send-file") {
       const cache = await cacheManager.createCache(
         message.fid,
@@ -316,21 +319,22 @@ export const WebRTCProvider: Component<
   const joinRoom = async (): Promise<void> => {
     console.log(`join room`, clientProfile);
 
+    let cs: ClientService;
     if (sessionService.clientService) {
-      return;
+      cs = sessionService.clientService;
+    } else {
+      cs = getClientService({
+        roomId: clientProfile.roomId,
+        password: clientProfile.password,
+        client: {
+          clientId: clientProfile.clientId,
+          name: clientProfile.name,
+          avatar: clientProfile.avatar,
+        },
+      });
+
+      sessionService.setClientService(cs);
     }
-
-    const cs = getClientService({
-      roomId: clientProfile.roomId,
-      password: clientProfile.password,
-      client: {
-        clientId: clientProfile.clientId,
-        name: clientProfile.name,
-        avatar: clientProfile.avatar,
-      },
-    });
-
-    sessionService.setClientService(cs);
 
     await cs.createClient().catch((err) => {
       sessionService.destoryService();
@@ -406,7 +410,7 @@ export const WebRTCProvider: Component<
 
       session.addEventListener("message", async (ev) => {
         const message = ev.detail;
-        handleMessage(session, message);
+        handleReceiveMessage(session, message);
       });
 
       session.addEventListener("channel", (ev) => {
@@ -608,7 +612,7 @@ export const WebRTCProvider: Component<
       createdAt: Date.now(),
     } as SendTextMessage;
     session.sendMessage(message);
-    messageStores.setMessage(message);
+    messageStores.handleReceiveMessage(message);
     console.log(`send text message`, message);
   };
 
@@ -648,7 +652,7 @@ export const WebRTCProvider: Component<
     });
 
     console.log(`send file message`, message);
-    messageStores.setMessage(message);
+    messageStores.handleReceiveMessage(message);
     session.sendMessage(message);
   };
 
@@ -732,7 +736,7 @@ export const WebRTCProvider: Component<
     } satisfies RequestFileMessage;
 
     await transferer.initialize();
-    messageStores.setMessage(message);
+    messageStores.handleReceiveMessage(message);
     session.sendMessage(message);
   };
 

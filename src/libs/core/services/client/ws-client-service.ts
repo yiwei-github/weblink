@@ -117,7 +117,7 @@ export class WebSocketClientService
     );
   }
 
-  async initialize(resume?: boolean) {
+  private async initialize(resume?: boolean) {
     const wsUrl = new URL(this.websocketUrl);
 
     wsUrl.searchParams.append("room", this.roomId);
@@ -317,6 +317,7 @@ export class WebSocketClientService
     await this.initialize();
   }
   destroy() {
+    this.dispatchEvent("status-change", "disconnected");
     this.signalingServices.forEach((service) =>
       service.destroy(),
     );

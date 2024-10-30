@@ -586,19 +586,15 @@ export default function Settings() {
           </h3>
           <div class="flex flex-col gap-2">
             <Switch
+              disabled={!navigator.clipboard}
               class="flex items-center justify-between"
               checked={appOptions.enableClipboard}
               onChange={(isChecked) =>
-                setAppOptions(
-                  "enableClipboard",
-                  isChecked,
-                )
+                setAppOptions("enableClipboard", isChecked)
               }
             >
               <SwitchLabel>
-                {t(
-                  "setting.sender.enable_clipboard.title",
-                )}
+                {t("setting.sender.enable_clipboard.title")}
               </SwitchLabel>
               <SwitchControl>
                 <SwitchThumb />
@@ -609,6 +605,13 @@ export default function Settings() {
                 "setting.sender.enable_clipboard.description",
               )}
             </p>
+            <Show when={!navigator.clipboard}>
+              <p class="text-xs text-destructive-foreground">
+                {t(
+                  "setting.sender.enable_clipboard.unsupported",
+                )}
+              </p>
+            </Show>
           </div>
           <div class="flex flex-col gap-2">
             <Switch
@@ -998,7 +1001,7 @@ export default function Settings() {
             </CollapsibleContent>
           </Collapsible>
           <Separator />
-          <label class="flex flex-col gap-2">
+          <div class=" place-self-end">
             <Button
               variant="destructive"
               onClick={async () => {
@@ -1018,14 +1021,13 @@ export default function Settings() {
               <IconDelete class="size-4" />
               {t("setting.about.reset_options")}
             </Button>
-          </label>
-
-          <label class="flex flex-col gap-2">
+          </div>
+          <div class="place-self-end">
             <Button onClick={() => open()} class="gap-2">
               <IconInfo class="size-4" />
               {t("setting.about.title")}
             </Button>
-          </label>
+          </div>
         </div>
       </div>
     </>

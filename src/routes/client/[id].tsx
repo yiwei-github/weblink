@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   IconArrowDownward,
+  IconAssignment,
   IconChevronLeft,
   IconClose,
   IconConnectWithoutContract,
@@ -62,13 +63,14 @@ import {
   IconMenu,
   IconPlaceItem,
 } from "@/components/icons";
-import { createComfirmDeleteClientDialog } from "@/components/ui/confirm-delete-dialog";
+import { createComfirmDeleteClientDialog } from "@/components/box/confirm-delete-dialog";
 import { t } from "@/i18n";
 import { ConnectionBadge } from "@/components/chat/clientlist";
 import { toast } from "solid-sonner";
 import { PeerSession } from "@/libs/core/session";
 import { v4 } from "uuid";
 import { appOptions } from "@/options";
+import { createClipboardHistoryDialog } from "@/components/box/clipboard-history";
 export default function ClientPage(
   props: RouteSectionProps,
 ) {
@@ -188,6 +190,11 @@ export default function ClientPage(
       sessionService.sessions[clientInfo()!.clientId],
   );
 
+  const {
+    open: openClipboardHistoryDialog,
+    Component: ClipboardHistoryDialogComponent,
+  } = createClipboardHistoryDialog();
+
   const onClipboard = (ev: ClipboardEvent) => {
     const s = session();
     if (!s) return;
@@ -211,7 +218,7 @@ export default function ClientPage(
   };
 
   onMount(() => {
-    if (appOptions.enableClipboard) {
+    if (navigator.clipboard && appOptions.enableClipboard) {
       window.addEventListener("paste", onClipboard);
 
       onCleanup(() => {
@@ -223,6 +230,7 @@ export default function ClientPage(
   return (
     <div class="flex h-full w-full flex-col">
       <Component />
+      <ClipboardHistoryDialogComponent />
       <Show when={client()}>
         {(client) => (
           <div
@@ -326,6 +334,22 @@ export default function ClientPage(
                         {t("chat.menu.connect")}
                       </DropdownMenuItem>
                     </Show>
+                    <Show when={clientInfo()?.clipboard}>
+                      {(clipboard) => (
+                        <DropdownMenuItem
+                          class="gap-2"
+                          onSelect={() => {
+                            openClipboardHistoryDialog(
+                              clipboard(),
+                            );
+                          }}
+                        >
+                          <IconAssignment class="size-4" />
+                          {t("chat.menu.clipboard")}
+                        </DropdownMenuItem>
+                      )}
+                    </Show>
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       class="gap-2"
