@@ -260,7 +260,7 @@
     "scan_qrcode_dialog": {
       "title": "Scan QR Code",
       "description": "Scan QR Code to connect to this room",
-      "tip": "Long press to copy the link"
+      "tip": "Right-click or long press to copy the link"
     },
     "action": {
       "copy": "Copy",

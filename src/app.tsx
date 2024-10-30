@@ -46,6 +46,7 @@ import {
 } from "./options";
 import { MetaProvider, Style } from "@solidjs/meta";
 import { Input } from "./components/ui/input";
+import { inputAutoResize } from "./libs/hooks/input-resize";
 let wakeLock: WakeLockSentinel | null = null;
 const requestWakeLock = async () => {
   if (!navigator.wakeLock) {
@@ -72,28 +73,25 @@ const createQRCodeDialog = () => {
       title: () => t("common.scan_qrcode_dialog.title"),
       content: () => {
         const url = joinUrl();
-
-        const handleLongPress = () => {
-          navigator.clipboard
-            .writeText(url)
-            .then(() => {
-              toast.success(
-                t("common.notification.link_copy_success"),
-              );
-            })
-            .catch(() => {
-              toast.error(
-                t("common.notification.copy_failed"),
-              );
-            });
-        };
-
         return (
-          <div class="flex select-none flex-col items-center">
+          <div class="flex select-none flex-col items-center gap-2">
             <div
               onContextMenu={(e) => {
                 e.preventDefault();
-                handleLongPress();
+                navigator.clipboard
+                  .writeText(url)
+                  .then(() => {
+                    toast.success(
+                      t(
+                        "common.notification.link_copy_success",
+                      ),
+                    );
+                  })
+                  .catch(() => {
+                    toast.error(
+                      t("common.notification.copy_failed"),
+                    );
+                  });
               }}
             >
               <QRCode
@@ -107,18 +105,25 @@ const createQRCodeDialog = () => {
               />
             </div>
             <Input
-              class="h-8 w-full select-all whitespace-pre-wrap break-all
-                text-center text-xs hover:underline"
+              class="h-8 w-full max-w-sm select-all whitespace-pre-wrap break-all
+                text-xs hover:underline"
+              readOnly
               onContextMenu={async (e) => {
                 e.preventDefault();
-                await navigator.clipboard.writeText(
-                  joinUrl(),
-                );
-                toast.success(
-                  t(
-                    "common.notification.link_copy_success",
-                  ),
-                );
+                navigator.clipboard
+                  .writeText(url)
+                  .then(() => {
+                    toast.success(
+                      t(
+                        "common.notification.link_copy_success",
+                      ),
+                    );
+                  })
+                  .catch(() => {
+                    toast.error(
+                      t("common.notification.copy_failed"),
+                    );
+                  });
               }}
               value={joinUrl()}
             />

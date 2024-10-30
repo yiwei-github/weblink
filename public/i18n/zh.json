@@ -190,7 +190,7 @@
     "scan_qrcode_dialog": {
       "title": "扫描二维码",
       "description": "扫描二维码以连接到此房间",
-      "tip": "长按复制链接"
+      "tip": "右键或长按复制链接"
     },
     "theme_toggle": {
       "light": "浅色模式",

@@ -42,12 +42,20 @@ export const textareaAutoResize = (
   });
 };
 
-export const inputAutoResize = (el: HTMLElement) => {
+export const inputAutoResize = (
+  el: HTMLElement,
+  signal?: Accessor<string>,
+) => {
   const resizeInput = () => {
     el.style.width = "";
     const borderWidth = el.offsetWidth - el.clientWidth;
     el.style.width = el.scrollWidth + borderWidth + "px";
   };
+
+  createEffect(() => {
+    signal?.();
+    resizeInput();
+  });
 
   onMount(() => {
     el.addEventListener("input", resizeInput);
