@@ -303,6 +303,9 @@
       "author": "Author",
       "license": "License",
       "github": "Click to open"
+    },
+    "timeago": {
+      "just_now": "Just Now"
     }
   }
 }

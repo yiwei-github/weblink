@@ -1,3 +1,4 @@
+import { SendClipboardMessage } from "./messge";
 import { TransferClient } from "./services/type";
 
 export type RoomStatus = {
@@ -25,7 +26,7 @@ export interface ClientInfo extends TransferClient {
   statsReports?: any[];
   candidateType?: string;
   onlineStatus: "offline" | "online" | "connecting";
-  clipboard?: string[];
+  clipboard?: SendClipboardMessage[];
 }
 export type RoomID = string;
 export type ClientID = string;

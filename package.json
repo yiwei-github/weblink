@@ -1,7 +1,7 @@
 {
   "name": "weblink",
   "type": "module",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "license": "MIT",
   "scripts": {
     "dev": "vite dev",
@@ -21,6 +21,7 @@
     "@material-design-icons/svg": "^0.14.13",
     "@material-symbols/svg-400": "^0.24.0",
     "@material-symbols/svg-700": "^0.24.0",
+    "@solid-primitives/date": "^2.0.24",
     "@solid-primitives/devices": "^1.2.6",
     "@solid-primitives/i18n": "^2.1.1",
     "@solid-primitives/map": "^0.4.13",
@@ -35,6 +36,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk-solid": "^1.1.0",
+    "date-fns": "^4.1.0",
     "fflate": "^0.8.2",
     "firebase": "^10.13.2",
     "photoswipe": "^5.4.4",

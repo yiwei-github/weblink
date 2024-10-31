@@ -35,14 +35,6 @@ export const keepBottom = (
     window.setTimeout(scroll, delay);
   }
 
-  let observer: MutationObserver = new MutationObserver(
-    (mutationsList) => {
-      if (enable()) {
-        toBottom(0, true);
-      }
-    },
-  );
-
   onMount(async () => {
     if (scrollElement instanceof Document) {
       const onResize = () => {
@@ -54,18 +46,6 @@ export const keepBottom = (
       window.addEventListener("resize", onResize);
       onCleanup(() => {
         window.removeEventListener("resize", onResize);
-      });
-    }
-
-    if (scrollElement) {
-      observer.observe(scrollElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-      });
-
-      onCleanup(() => {
-        observer?.disconnect();
       });
     }
   });

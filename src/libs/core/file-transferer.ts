@@ -564,7 +564,9 @@ export class FileTransferer {
     if (!this.sendData) {
       this.dispatchEvent(
         "error",
-        new Error("必须先调用init初始化"),
+        new Error(
+          "file transferer is not initialized, can not send file",
+        ),
       );
       return;
     }

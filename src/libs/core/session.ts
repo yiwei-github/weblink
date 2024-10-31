@@ -292,11 +292,29 @@ export class PeerSession {
       { signal: this.controller.signal },
     );
 
+    document.addEventListener(
+      "visibilitychange",
+      (ev) => {
+        if (document.visibilityState === "visible") {
+          if (
+            this.peerConnection?.connectionState !==
+            "connected"
+          ) {
+            this.reconnect();
+          }
+        }
+      },
+      { signal: this.controller.signal },
+    );
+
     return pc;
   }
 
   async listen() {
-    await this.createConnection();
+    if ((await this.createConnection()) === undefined) {
+      console.warn(`session connection is created`);
+      return;
+    }
 
     this.sender.addEventListener(
       "signal",
@@ -314,7 +332,7 @@ export class PeerSession {
 
         try {
           const signal = ev.detail;
-          if (signal.type === "offer") {
+          if (this.polite && signal.type === "offer") {
             const offerCollision =
               this.makingOffer ||
               pc.signalingState !== "stable";
@@ -327,7 +345,6 @@ export class PeerSession {
               return;
             }
 
-            
             await pc
               .setRemoteDescription(
                 new RTCSessionDescription({
@@ -345,7 +362,10 @@ export class PeerSession {
                     }),
                   });
               });
-          } else if (signal.type === "answer") {
+          } else if (
+            !this.polite &&
+            signal.type === "answer"
+          ) {
             await pc.setRemoteDescription(
               new RTCSessionDescription({
                 type: "answer",
@@ -441,7 +461,7 @@ export class PeerSession {
   async renegotiate() {
     if (!this.peerConnection) {
       console.warn(
-        `renegotiate调用必须已经初始化peerConnection`,
+        `renegotiate failed, peer connection is not created`,
       );
       return;
     }
@@ -542,6 +562,12 @@ export class PeerSession {
   }
 
   async connect() {
+    if (this.polite) {
+      console.log(
+        `session ${this.sessionId} is polite, skip connect`,
+      );
+      return;
+    }
     const pc = this.peerConnection;
     if (!pc) {
       console.warn(`listen failed`);

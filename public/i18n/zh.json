@@ -312,6 +312,9 @@
       "copy_failed": "复制失败",
       "reset_options_success": "选项重置成功",
       "unknown_error": "未知错误"
+    },
+    "timeago": {
+      "just_now": "刚刚"
     }
   }
 }

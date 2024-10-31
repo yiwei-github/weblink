@@ -189,20 +189,10 @@ svg {
   @apply fill-current;
 }
 
-@keyframes slideUp {
-  from {
-    margin-top: 5rem; /* mb-10 */
-    margin-bottom: 0rem; /* mb-10 */
-  }
-  to {
-    margin-top: 0rem; /* mb-10 */
-    margin-bottom: 5rem; /* mb-20 */
-  }
-}
 
 @keyframes popIn {
   from {
-    transform: scale(0.95);
+    transform: scale(0.90);
     opacity: 0;
   }
   to {
@@ -212,7 +202,5 @@ svg {
 }
 
 .animate-message {
-  animation:
-    slideUp 0.3s ease-out,
-    popIn 0.15s ease-in;
+  animation: popIn 0.3s ease-out;
 }

@@ -359,12 +359,12 @@ class MessageStores {
     sessionMsg: SessionMessage,
   ): SessionMessage | null {
     let index: number = -1;
-    const isSending =
+    const isSender =
       this.localClientId === sessionMsg.client;
     const setStatus = (message: StoreMessage) => {
       this.setMessages(index, "error", undefined);
       this.setMessageDB(this.messages[index]);
-      if (!isSending) {
+      if (!isSender) {
         return;
       } else {
         if (message.status === "received") return;
@@ -385,7 +385,7 @@ class MessageStores {
         const message = {
           ...sessionMsg,
           type: "text",
-          status: isSending ? "sending" : "received",
+          status: isSender ? "sending" : "received",
         } satisfies TextMessage;
         this.setMessages(
           produce((state) => {
@@ -413,7 +413,7 @@ class MessageStores {
         const message = {
           ...sessionMsg,
           type: "file",
-          status: isSending ? "sending" : "received",
+          status: isSender ? "sending" : "received",
         } satisfies FileTransferMessage;
         this.setMessages(
           produce((state) => {

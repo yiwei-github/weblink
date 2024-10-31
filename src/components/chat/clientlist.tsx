@@ -37,6 +37,7 @@ import {
 import { sessionService } from "@/libs/services/session-service";
 import { createComfirmDeleteClientDialog } from "../box/confirm-delete-dialog";
 import { t } from "@/i18n";
+import { createTimeAgo } from "@/libs/utils/timeago";
 export const getInitials = (name = "") =>
   name
     .split(" ")
@@ -199,9 +200,7 @@ export const UserItem: Component<UserItemProps> = (
                   <Show when={props.message?.createdAt}>
                     {(createdAt) => (
                       <span class="muted float-end text-nowrap text-xs">
-                        {new Date(
-                          createdAt(),
-                        ).toLocaleString()}
+                        {createTimeAgo(createdAt())}
                       </span>
                     )}
                   </Show>

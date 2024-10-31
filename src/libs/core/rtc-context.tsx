@@ -30,6 +30,7 @@ import {
   CheckMessage,
   messageStores,
   RequestFileMessage,
+  SendClipboardMessage,
   SendFileMessage,
   SendTextMessage,
   SessionMessage,
@@ -132,12 +133,14 @@ export const WebRTCProvider: Component<
   //   }
   // });
 
-  let clipboardCacheData: string[] = [];
+  let clipboardCacheData: SendClipboardMessage[] = [];
 
   onMount(() => {
     const onFocus = () => {
       if (clipboardCacheData.length === 0) return;
-      const data = clipboardCacheData.join("\n");
+      const data = clipboardCacheData
+        .map((msg) => msg.data)
+        .join("\n");
       navigator.clipboard
         .writeText(data)
         .then(() => {
@@ -195,7 +198,7 @@ export const WebRTCProvider: Component<
             toast.success(message.data);
           })
           .catch((err) => {
-            clipboardCacheData.push(message.data);
+            clipboardCacheData.push(message);
             if (err instanceof Error) {
               console.warn(
                 `can not write ${message.data} to clipboard, ${err.message}`,

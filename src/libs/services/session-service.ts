@@ -62,7 +62,7 @@ class SessionService {
         produce((state) => {
           state.clipboard = [
             ...(state.clipboard ?? []),
-            message.data,
+            message,
           ];
         }),
       );

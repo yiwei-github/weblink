@@ -6,6 +6,7 @@ import {
   createMemo,
   createSignal,
   Match,
+  onMount,
   Show,
   splitProps,
   Switch,
@@ -75,13 +76,16 @@ import { toast } from "solid-sonner";
 import { Dynamic } from "solid-js/web";
 import { createMediaQuery } from "@solid-primitives/media";
 import { appOptions } from "@/options";
+import { createTimeAgo } from "@/libs/utils/timeago";
 export interface MessageCardProps
   extends ComponentProps<"li"> {
   message: StoreMessage;
+  onLoad?: () => void;
 }
 
 export interface FileMessageCardProps {
   message: FileTransferMessage;
+  onLoad?: () => void;
 }
 
 const FileTitle = {
@@ -166,6 +170,12 @@ const FileMessageCard: Component<FileMessageCardProps> = (
   //   }
   // });
 
+  createEffect(() => {
+    if (props.message.type === "file") {
+      props.onLoad?.();
+    }
+  });
+
   return (
     <div class="flex flex-col gap-2">
       <Show
@@ -245,6 +255,7 @@ const FileMessageCard: Component<FileMessageCardProps> = (
                           class="flex max-h-48 rounded-sm bg-muted hover:cursor-pointer
                             lg:max-h-72 xl:max-h-96"
                           src={url}
+                          alt={info().fileName}
                           onload={(ev) => {
                             const parent =
                               ev.currentTarget
@@ -255,6 +266,8 @@ const FileMessageCard: Component<FileMessageCardProps> = (
                               ev.currentTarget.naturalHeight.toString();
                             parent.dataset.download =
                               info().fileName;
+
+                            props.onLoad?.();
                           }}
                         />
                       </a>
@@ -272,6 +285,7 @@ const FileMessageCard: Component<FileMessageCardProps> = (
                         class="max-h-60 lg:max-h-72 xl:max-h-96"
                         controls
                         src={url}
+                        onCanPlay={() => props.onLoad?.()}
                       />
                     </Match>
                     <Match
@@ -287,6 +301,7 @@ const FileMessageCard: Component<FileMessageCardProps> = (
                         class="max-h-60 lg:max-h-72 xl:max-h-96"
                         controls
                         src={url}
+                        onCanPlay={() => props.onLoad?.()}
                       />
                     </Match>
                   </Switch>
@@ -405,6 +420,7 @@ export const MessageContent: Component<MessageCardProps> = (
   const [local, other] = splitProps(props, [
     "class",
     "message",
+    "onLoad",
   ]);
   const targetClientInfo = createMemo(
     () => sessionService.clientInfo[local.message.target],
@@ -549,7 +565,10 @@ export const MessageContent: Component<MessageCardProps> = (
                 }
               >
                 {(message) => (
-                  <FileMessageCard message={message()} />
+                  <FileMessageCard
+                    message={message()}
+                    onLoad={() => local.onLoad?.()}
+                  />
                 )}
               </Match>
             </Switch>
@@ -616,11 +635,7 @@ export const MessageContent: Component<MessageCardProps> = (
             class="flex justify-end gap-1 self-end text-xs
               text-muted-foreground"
           >
-            <p>
-              {new Date(
-                props.message.createdAt,
-              ).toLocaleTimeString()}
-            </p>
+            <p>{createTimeAgo(props.message.createdAt)}</p>
             <p>
               <Switch>
                 <Match
@@ -722,10 +737,13 @@ export const ChatBar: Component<
           value={text()}
           onInput={(ev) => setText(ev.currentTarget.value)}
           onPaste={(ev) => {
-            if (!isMobile()) {
-              ev.stopPropagation();
-            } else {
-              if (appOptions.enableClipboard) {
+            if (
+              navigator.clipboard &&
+              appOptions.enableClipboard
+            ) {
+              if (!isMobile()) {
+                ev.stopPropagation();
+              } else {
                 setTimeout(() => {
                   setText("");
                 }, 0);
@@ -769,7 +787,13 @@ export const ChatBar: Component<
         />
       </form>
       <div class="flex gap-1">
-        <Show when={isMobile() && appOptions.enableClipboard}>
+        <Show
+          when={
+            isMobile() &&
+            navigator.clipboard &&
+            appOptions.enableClipboard
+          }
+        >
           <p class="text-xs text-muted-foreground">
             {t("chat.message_editor.paste_tip")}
           </p>

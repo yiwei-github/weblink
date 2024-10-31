@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3] - 2024-10-31
+
+### Bug Fixes
+
+- Fix the bug that the message cannot be scrolled to the bottom when the client is online 修复了当客户端在线时消息无法滚动到底部的问题
+
+### Improvements
+
+- Improve the animation of the message 优化消息的动画
+
+- Improve the date format 优化日期格式
+
 ## [0.3.2] - 2024-10-30
 
 ### New Features

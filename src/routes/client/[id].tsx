@@ -170,14 +170,28 @@ export default function ClientPage(
   onMount(() => {
     toBottom = keepBottom(document, enable);
 
-    toBottom(10, true);
+    toBottom(50, true);
 
     createEffect(() => {
       if (props.location.pathname !== "/") {
+        toBottom(50, true);
+      }
+    });
+    createEffect(() => {
+      if (messages().length) {
+        toBottom(10, false);
+      }
+    });
+    createEffect(() => {
+      if (
+        clientInfo()?.onlineStatus === "online" &&
+        enable()
+      ) {
         toBottom(10, true);
       }
     });
   });
+
   const [bottomElem, setBottomElem] =
     createSignal<HTMLElement>();
   const size = createElementSize(bottomElem);
@@ -227,6 +241,8 @@ export default function ClientPage(
     }
   });
 
+  let loadedTimer: number | undefined;
+
   return (
     <div class="flex h-full w-full flex-col">
       <Component />
@@ -242,7 +258,7 @@ export default function ClientPage(
               onClick={async () => {
                 toBottom?.(0, false);
               }}
-              delay={150}
+              delay={500}
               duration={150}
               isVisible={!enable()}
               class="fixed z-50 size-12 rounded-full shadow-md backdrop-blur
@@ -340,7 +356,7 @@ export default function ClientPage(
                           class="gap-2"
                           onSelect={() => {
                             openClipboardHistoryDialog(
-                              clipboard(),
+                              clipboard,
                             );
                           }}
                         >
@@ -484,8 +500,21 @@ export default function ClientPage(
                   {(message, index) => (
                     <MessageContent
                       message={message}
+                      onLoad={() => {
+                        if (message.type === "file") {
+                          console.log(
+                            `${message.fileName} loaded`,
+                          );
+                        }
+                        clearTimeout(loadedTimer);
+                        loadedTimer = window.setTimeout(
+                          () => {
+                            toBottom(250, false);
+                          },
+                          250,
+                        );
+                      }}
                       class={cn(
-                        "transition-all",
                         index() === messages().length - 1 &&
                           "animate-message mb-20",
                       )}

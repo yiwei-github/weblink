@@ -27,7 +27,7 @@ export class WebSocketSignalingService
   private _clientId: string;
   private _targetClientId: string;
   private password: string | null = null;
-
+  private messageQueue: RawSignal[] = [];
   constructor(
     socket: WebSocket,
     clientId: string,
@@ -86,6 +86,10 @@ export class WebSocketSignalingService
     );
     this.socket = socket;
     this.socket.addEventListener("message", this.onMessage);
+    this.messageQueue.forEach((signal) => {
+      this.sendSignal(signal);
+    });
+    this.messageQueue.length = 0;
   }
 
   get sessionId(): SessionID {
@@ -112,17 +116,21 @@ export class WebSocketSignalingService
       );
     }
 
-    this.socket.send(
-      JSON.stringify({
-        type: "message",
-        data: {
-          type: signal.type,
-          targetClientId: this._targetClientId,
-          clientId: this._clientId,
-          data: signal.data,
-        } as ClientSignal,
-      }),
-    );
+    const message = {
+      type: "message",
+      data: {
+        type: signal.type,
+        targetClientId: this._targetClientId,
+        clientId: this._clientId,
+        data: signal.data,
+      } as ClientSignal,
+    };
+    if (this.socket.readyState !== WebSocket.OPEN) {
+      this.messageQueue.push(signal);
+      return;
+    }
+
+    this.socket.send(JSON.stringify(message));
   }
 
   private onMessage = async (event: MessageEvent) => {
