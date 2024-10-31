@@ -15,7 +15,7 @@ You can also use [https://webl.ink](https://webl.ink) which deployed on aliyun i
 ### Run Locally
 
 ```bash
-git clone https://github.com/99percentpeople/weblink.git
+git clone https://github.com/yiwei-github/weblink.git
 cd weblink
 pnpm install
 ```
