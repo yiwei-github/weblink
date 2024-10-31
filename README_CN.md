@@ -15,7 +15,7 @@ Weblink 是一个基于 WebRTC 的纯网页聊天应用程序，无需下载，�
 ### 本地运行
 
 ```bash
-git clone https://github.com/99percentpeople/weblink.git
+git clone https://github.com/yiwei-github/weblink.git
 cd weblink
 pnpm install
 ```
